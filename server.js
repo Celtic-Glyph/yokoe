@@ -8,6 +8,51 @@ const path = require('path');
 // Function to send rich Discord Webhook embeds
 async function sendDiscordWebhook(title, description, botData, color = 0x5865F2) {
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+
+  if (!webhookUrl) {
+    console.log('⚠️ WEBHOOK ERROR: DISCORD_WEBHOOK_URL environment variable is missing!');
+    return;
+  }
+
+  console.log('🚀 Attempting to send Discord webhook...');
+
+  try {
+    const payload = {
+      embeds: [
+        {
+          title: title,
+          description: description,
+          color: color,
+          thumbnail: botData.avatar ? { url: botData.avatar } : undefined,
+          fields: [
+            { name: '🤖 Bot Name', value: botData.name || 'N/A', inline: true },
+            { name: '🏷️ Category', value: botData.category || 'Utility', inline: true },
+            { name: '👤 Owner ID', value: botData.ownerId ? `<@${botData.ownerId}>` : 'Anonymous', inline: true }
+          ],
+          timestamp: new Date().toISOString(),
+          footer: { text: 'Yokoe Bot Directory' }
+        }
+      ]
+    };
+
+    if (botData.inviteUrl && botData.inviteUrl.startsWith('http')) {
+      payload.embeds[0].fields.push({
+        name: '🔗 Invite Link',
+        value: `[Click to Invite](${botData.inviteUrl})`,
+        inline: false
+      });
+    }
+
+    const response = await axios.post(webhookUrl, payload);
+    console.log('✅ Webhook sent successfully! Discord status:', response.status);
+  } catch (err) {
+    console.error('❌ DISCORD WEBHOOK FAILED:', err.response ? err.response.data : err.message);
+  }
+}
+
+// Function to send rich Discord Webhook embeds
+async function sendDiscordWebhook(title, description, botData, color = 0x5865F2) {
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   if (!webhookUrl) return;
 
   try {
@@ -158,12 +203,12 @@ app.post('/api/bots/manage', async (req, res) => {
       savedBot = new Bot(botData);
       await savedBot.save();
 
-      // 🚀 Send Discord Webhook alert for NEW bots!
+      // 🚀 CALL the function here!
       await sendDiscordWebhook(
         '🎉 New Bot Added!',
         `**${savedBot.name}** was just listed on the Yokoe Directory.`,
         savedBot,
-        0x57F287 // Green color
+        0x57F287
       );
     }
 
