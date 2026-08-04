@@ -5,50 +5,64 @@ const cors = require('cors');
 const axios = require('axios');
 const path = require('path');
 
-// Function to send rich Discord Webhook embeds
+// Reliable Discord Webhook Notification Helper
 async function sendDiscordWebhook(title, description, botData, color = 0x5865F2) {
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
-  if (!webhookUrl) return;
+  if (!webhookUrl) {
+    console.log('⚠️ DISCORD_WEBHOOK_URL missing in environment variables.');
+    return;
+  }
+
+  // 1. Ensure thumbnail is a valid HTTPS URL or fallback to default
+  let avatarUrl = 'https://i.imgur.com/8N3Oa6E.png';
+  if (botData.avatar && typeof botData.avatar === 'string' && botData.avatar.startsWith('http')) {
+    avatarUrl = botData.avatar;
+  }
+
+  // 2. Safely resolve owner ID string
+  const ownerText = (botData.ownerId && String(botData.ownerId).trim() !== '') 
+    ? String(botData.ownerId) 
+    : 'Anonymous';
+
+  // 3. Build valid payload
+  const payload = {
+    username: 'Yokoe Directory',
+    embeds: [
+      {
+        title: String(title || 'New Bot Listing'),
+        description: String(description || 'A bot was updated/added.'),
+        color: color,
+        thumbnail: { url: avatarUrl },
+        fields: [
+          { name: '🤖 Bot Name', value: String(botData.name || 'Unknown Bot'), inline: true },
+          { name: '🏷️ Category', value: String(botData.category || 'Utility'), inline: true },
+          { name: '👤 Owner', value: ownerText, inline: true }
+        ],
+        timestamp: new Date().toISOString(),
+        footer: { text: 'Yokoe Bot Directory' }
+      }
+    ]
+  };
+
+  // 4. Safely add invite link if it's a full URL
+  if (botData.inviteUrl && typeof botData.inviteUrl === 'string' && botData.inviteUrl.startsWith('http')) {
+    payload.embeds[0].fields.push({
+      name: '🔗 Invite Link',
+      value: `[Click to Invite](${botData.inviteUrl})`,
+      inline: false
+    });
+  }
 
   try {
-    // 1. Ensure thumbnail URL is valid or fallback to default
-    let avatarUrl = 'https://i.imgur.com/8N3Oa6E.png';
-    if (botData.avatar && typeof botData.avatar === 'string' && botData.avatar.startsWith('http')) {
-      avatarUrl = botData.avatar;
-    }
-
-    // 2. Build base payload
-    const payload = {
-      embeds: [
-        {
-          title: String(title || 'New Notification'),
-          description: String(description || ''),
-          color: color,
-          thumbnail: { url: avatarUrl },
-          fields: [
-            { name: '🤖 Bot Name', value: String(botData.name || 'N/A'), inline: true },
-            { name: '🏷️ Category', value: String(botData.category || 'Utility'), inline: true },
-            { name: '👤 Owner ID', value: botData.ownerId ? `<@${botData.ownerId}>` : 'Anonymous', inline: true }
-          ],
-          timestamp: new Date().toISOString(),
-          footer: { text: 'Yokoe Bot Directory' }
-        }
-      ]
-    };
-
-    // 3. Only add invite link field if it's a valid http URL
-    if (botData.inviteUrl && typeof botData.inviteUrl === 'string' && botData.inviteUrl.startsWith('http')) {
-      payload.embeds[0].fields.push({
-        name: '🔗 Invite Link',
-        value: `[Click to Invite](${botData.inviteUrl})`,
-        inline: false
-      });
-    }
-
     await axios.post(webhookUrl, payload);
     console.log('✅ Discord Webhook delivered successfully!');
   } catch (err) {
-    console.error('Webhook notification error:', err.response ? err.response.data : err.message);
+    console.error('❌ DISCORD REJECTED PAYLOAD:');
+    if (err.response && err.response.data) {
+      console.error(JSON.stringify(err.response.data, null, 2));
+    } else {
+      console.error(err.message);
+    }
   }
 }
 
