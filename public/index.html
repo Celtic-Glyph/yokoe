@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yokoe - Bot Directory</title>
+
+  <meta name="description" content="Discover, explore, and invite top-tier Discord bots for music, moderation, economy, and utility.">
+  <meta property="og:title" content="Yokoe - Discord Bot Directory">
+  <meta property="og:description" content="Discover, explore, and invite top-tier Discord bots for music, moderation, economy, and utility.">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#4f46e5">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+      animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+  </style>
+</head>
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen font-sans flex flex-col antialiased selection:bg-indigo-500 selection:text-white relative overflow-x-hidden pt-20">
+
+  <!-- Canvas Background -->
+  <canvas id="snow-canvas" class="fixed inset-0 pointer-events-none z-0"></canvas>
+
+  <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/2 -right-40 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="fixed top-0 left-0 right-0 z-50 border-b border-slate-800/80 bg-[#0b0f19] backdrop-blur-md shadow-xl">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+      <a href="landing.html" class="flex items-center gap-3 hover:opacity-90 transition">
+        <div class="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-black text-sm">
+          ⚡
+        </div>
+        <h1 class="text-lg font-bold tracking-wide text-white">Yokoe</h1>
+      </a>
+
+      <nav class="flex items-center gap-3 text-sm font-semibold">
+        <!-- Dynamic User Auth Section -->
+        <div id="auth-container">
+          <button onclick="loginWithDiscord()" class="bg-[#5865F2] hover:bg-[#4752C4] text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-[#5865F2]/20 active:scale-95">
+            <svg class="w-4 h-4 fill-current" viewBox="0 0 127.14 96.36">
+              <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a73.57,73.57,0,0,0,64.32,0c.87.69,1.76,1.37,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1,105.25,105.25,0,0,0,32.19-16.14c2.64-27.38-4.51-51.11-18.95-72.15ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.92,53.87,53,48.74,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.92,96.1,53,91,65.69,84.69,65.69Z"/>
+            </svg>
+            Login with Discord
+          </button>
+        </div>
+
+        <button id="admin-nav-btn" onclick="openAdminModal()" class="hidden bg-slate-900 border border-slate-700 hover:bg-slate-800 text-indigo-400 px-3 py-2 rounded-xl text-xs font-semibold transition">
+          🛡️ Admin Panel
+        </button>
+
+        <a href="landing.html" class="text-slate-400 hover:text-white transition text-xs sm:text-sm ml-2">
+          ← Back
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- View 1: Public Gallery -->
+  <main id="view-gallery" class="relative z-10 max-w-6xl mx-auto px-6 py-8 flex-grow w-full">
+    <div class="mb-8 space-y-4">
+      <div class="flex flex-col gap-4 bg-slate-900/60 p-4 rounded-2xl border border-slate-800/80 backdrop-blur-md">
+        <div class="flex flex-col sm:flex-row gap-4 justify-between items-center">
+          <div class="relative w-full sm:w-80">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500 text-sm">🔍</span>
+            <input type="text" id="search-input" oninput="filterBots()" placeholder="Search bots or features..." class="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition">
+          </div>
+
+          <div id="category-pills" class="flex flex-wrap gap-1.5 w-full sm:w-auto">
+            <button onclick="setCategory('All')" class="category-pill bg-indigo-600 text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition border border-indigo-500/30">All</button>
+            <button onclick="setCategory('Music')" class="category-pill bg-slate-950/80 hover:bg-slate-800 text-slate-400 text-xs font-semibold px-3 py-1.5 rounded-xl transition border border-slate-800">Music</button>
+            <button onclick="setCategory('Moderation')" class="category-pill bg-slate-950/80 hover:bg-slate-800 text-slate-400 text-xs font-semibold px-3 py-1.5 rounded-xl transition border border-slate-800">Moderation</button>
+            <button onclick="setCategory('Economy')" class="category-pill bg-slate-950/80 hover:bg-slate-800 text-slate-400 text-xs font-semibold px-3 py-1.5 rounded-xl transition border border-slate-800">Economy</button>
+            <button onclick="setCategory('Utility')" class="category-pill bg-slate-950/80 hover:bg-slate-800 text-slate-400 text-xs font-semibold px-3 py-1.5 rounded-xl transition border border-slate-800">Utility</button>
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-t border-slate-800/60 pt-3">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mr-1">Status:</span>
+            <button onclick="setStatusFilter('All')" class="status-pill bg-indigo-600 text-white text-[11px] font-semibold px-2.5 py-1 rounded-lg transition">Any</button>
+            <button onclick="setStatusFilter('Online')" class="status-pill bg-slate-950 hover:bg-slate-800 text-emerald-400 text-[11px] font-semibold px-2.5 py-1 rounded-lg transition border border-slate-800">● Online</button>
+            <button onclick="setStatusFilter('Maintenance')" class="status-pill bg-slate-950 hover:bg-slate-800 text-amber-400 text-[11px] font-semibold px-2.5 py-1 rounded-lg transition border border-slate-800">● Maintenance</button>
+            <button onclick="setStatusFilter('Updating')" class="status-pill bg-slate-950 hover:bg-slate-800 text-sky-400 text-[11px] font-semibold px-2.5 py-1 rounded-lg transition border border-slate-800">● Updating</button>
+            <button onclick="setStatusFilter('Offline')" class="status-pill bg-slate-950 hover:bg-slate-800 text-rose-400 text-[11px] font-semibold px-2.5 py-1 rounded-lg transition border border-slate-800">● Offline</button>
+          </div>
+
+          <div class="flex items-center gap-2 text-xs text-slate-400 w-full sm:w-auto justify-end">
+            <span>Sort by:</span>
+            <select id="sort-select" onchange="filterBots()" class="bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-indigo-500">
+              <option value="popular">Most Popular ❤️</option>
+              <option value="rating">Highest Rated ⭐</option>
+              <option value="newest">Newest First</option>
+              <option value="name">Alphabetical</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="bot-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+  </main>
+
+  <!-- View 2: Detailed Bot View -->
+  <main id="view-details" class="relative z-10 max-w-4xl mx-auto px-6 py-8 flex-grow w-full hidden">
+    <button onclick="showGalleryView()" class="mb-6 flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-indigo-400 transition bg-slate-900/60 border border-slate-800 px-3.5 py-2 rounded-xl backdrop-blur-md">
+      ← Back to Directory
+    </button>
+    <div id="bot-details-content" class="bg-slate-900/70 border border-slate-800/80 rounded-2xl overflow-hidden backdrop-blur-md shadow-2xl animate-fade-in"></div>
+  </main>
+
+  <footer class="relative z-10 border-t border-slate-800/60 bg-[#090c14]/90 backdrop-blur-md py-6 text-center text-xs text-slate-500 mt-auto">
+    <div class="max-w-6xl mx-auto px-6 flex justify-between items-center">
+      <span>© Discord Bots By Cxltc</span>
+    </div>
+  </footer>
+
+  <!-- Admin Control Panel Modal -->
+  <div id="admin-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative animate-fade-in">
+      <div class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
+        <div class="flex items-center gap-2">
+          <span class="text-indigo-400 text-lg">🛡️</span>
+          <h2 class="text-base font-bold text-white tracking-wide">Control Panel</h2>
+        </div>
+        <button onclick="closeAdminModal()" class="text-slate-400 hover:text-white w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-800 transition">✕</button>
+      </div>
+
+      <div id="auth-section" class="space-y-4 py-4">
+        <p class="text-sm text-slate-300">Enter PIN (Default: <code class="bg-slate-950 px-2 py-0.5 rounded border border-slate-800 text-indigo-400">1234</code>):</p>
+        <div class="flex gap-2">
+          <input type="password" id="admin-pin" class="bg-slate-950 border border-slate-700/80 rounded-xl px-4 py-2 text-sm w-full focus:outline-none focus:border-indigo-500 transition" placeholder="Enter PIN">
+          <button onclick="authenticateAdmin()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-xl text-sm font-medium transition shadow-lg shadow-indigo-600/20">Unlock</button>
+        </div>
+      </div>
+
+      <div id="admin-controls" class="hidden space-y-8">
+        <form id="bot-form" onsubmit="handleFormSubmit(event)" class="bg-slate-950/60 p-5 rounded-xl border border-slate-800 space-y-4">
+          <div class="flex justify-between items-center">
+            <h3 id="form-title" class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Add New Bot</h3>
+            <button type="button" id="cancel-edit-btn" onclick="resetForm()" class="hidden text-xs text-slate-400 hover:text-white underline">Cancel</button>
+          </div>
+
+          <input type="hidden" id="editing-bot-id" value="">
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="text-[11px] text-slate-400 mb-1 block">Bot Name</label>
+              <input type="text" id="bot-name" placeholder="e.g. Voidec" required class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 transition">
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 mb-1 block">Category</label>
+              <select id="bot-category" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 transition">
+                <option value="Music">Music</option>
+                <option value="Moderation">Moderation</option>
+                <option value="Economy">Economy</option>
+                <option value="Utility">Utility</option>
+                <option value="Fun">Fun</option>
+              </select>
+            </div>
+
+            <div class="sm:col-span-2 flex items-center gap-6 py-1 bg-slate-900/60 px-3 rounded-lg border border-slate-800/80">
+              <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                <input type="checkbox" id="bot-featured" class="rounded border-slate-700 bg-slate-950 text-indigo-600 focus:ring-0">
+                <span>⭐ Featured Bot</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                <input type="checkbox" id="bot-verified" class="rounded border-slate-700 bg-slate-950 text-indigo-600 focus:ring-0">
+                <span>☑️ Verified Bot</span>
+              </label>
+            </div>
+
+            <div class="sm:col-span-2 bg-indigo-950/30 p-3 rounded-lg border border-indigo-500/20 space-y-2">
+              <label class="text-[11px] text-indigo-300 font-semibold block">⚡ Quick Invite Link Generator</label>
+              <div class="flex gap-2">
+                <input type="text" id="bot-client-id" placeholder="Discord Client / Application ID" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-indigo-500 transition">
+                <button type="button" onclick="generateInviteFromID()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-1.5 rounded-lg shrink-0 font-medium transition">Generate</button>
+              </div>
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="text-[11px] text-slate-400 mb-1 block">Invite Link</label>
+              <input type="url" id="bot-invite" placeholder="https://discord.com/..." required class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 transition">
+            </div>
+
+            <div>
+              <label class="text-[11px] text-slate-400 mb-1 block">Server Count (e.g. 1.2k)</label>
+              <input type="text" id="bot-servers" placeholder="1.5k" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 transition">
+            </div>
+
+            <div>
+              <label class="text-[11px] text-slate-400 mb-1 block">Ping / Speed (e.g. 24ms)</label>
+              <input type="text" id="bot-ping" placeholder="18ms" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 transition">
+            </div>
+            
+            <div>
+              <label class="text-[11px] text-slate-400 mb-1 block">Avatar Image</label>
+              <input type="file" id="bot-avatar-file" accept="image/*" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:bg-indigo-600 file:text-white cursor-pointer">
+              <span id="current-avatar-notice" class="text-[10px] text-amber-400/80 hidden mt-1 block">Leave empty to keep existing avatar</span>
+            </div>
+
+            <div>
+              <label class="text-[11px] text-slate-400 mb-1 block">Banner Image (Optional)</label>
+              <input type="file" id="bot-banner-file" accept="image/*" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:bg-indigo-600 file:text-white cursor-pointer">
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="text-[11px] text-slate-400 mb-1 block">Status</label>
+              <select id="bot-status" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 transition">
+                <option value="Online">Online</option>
+                <option value="Maintenance">Maintenance</option>
+                <option value="Updating">Updating</option>
+                <option value="Offline">Offline</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-[11px] text-slate-400 mb-1 block">Short Description</label>
+            <textarea id="bot-desc" placeholder="Brief summary..." required class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm h-16 focus:outline-none focus:border-indigo-500 transition resize-none"></textarea>
+          </div>
+
+          <div class="border-t border-slate-800 pt-3 space-y-3">
+            <h4 class="text-xs font-semibold text-slate-300">Extended Bot Info Page Details</h4>
+            <div>
+              <label class="text-[11px] text-slate-400 mb-1 block">Commands (One command per line)</label>
+              <textarea id="bot-commands" placeholder="/play - Plays music&#10;/skip - Skips track" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm h-20 focus:outline-none focus:border-indigo-500 transition resize-none"></textarea>
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 mb-1 block">Usage Guide</label>
+              <textarea id="bot-usage" placeholder="How to use the bot..." class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm h-16 focus:outline-none focus:border-indigo-500 transition resize-none"></textarea>
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 mb-1 block">Configuration Instructions</label>
+              <textarea id="bot-config" placeholder="Setup or permissions needed..." class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm h-16 focus:outline-none focus:border-indigo-500 transition resize-none"></textarea>
+            </div>
+          </div>
+          
+          <button type="submit" id="submit-btn" class="w-full bg-emerald-600 hover:bg-emerald-500 py-2.5 rounded-lg text-sm font-semibold transition shadow-lg shadow-emerald-600/20">Add Bot</button>
+        </form>
+
+        <div class="space-y-3">
+          <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Manage Existing Bots</h3>
+          <div id="admin-bot-list" class="space-y-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ADMIN_PIN = "1234";
+    let bots = [];
+    let selectedCategory = "All";
+    let selectedStatus = "All";
+    let currentUser = JSON.parse(localStorage.getItem('yokoe_user') || 'null');
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(type) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      const now = audioCtx.currentTime;
+
+      if (type === 'click') {
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + 0.05);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
+        osc.start(now);
+        osc.stop(now + 0.05);
+      } else if (type === 'upvote') {
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+        osc.start(now);
+        osc.stop(now + 0.15);
+      } else if (type === 'success') {
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.08);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+        osc.start(now);
+        osc.stop(now + 0.2);
+      }
+    }
+
+    // --- Discord OAuth Popup & Session Handling ---
+    function loginWithDiscord() {
+      const width = 500, height = 750;
+      const left = (window.innerWidth / 2) - (width / 2);
+      const top = (window.innerHeight / 2) - (height / 2);
+      window.open('/api/auth/discord', 'DiscordAuth', `width=${width},height=${height},top=${top},left=${left}`);
+    }
+
+    function logoutDiscord() {
+      currentUser = null;
+      localStorage.removeItem('yokoe_user');
+      updateAuthUI();
+      renderGallery();
+    }
+
+    window.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'DISCORD_AUTH_SUCCESS') {
+        currentUser = event.data.user;
+        localStorage.setItem('yokoe_user', JSON.stringify(currentUser));
+        updateAuthUI();
+        playSound('success');
+      }
+    });
+
+    function updateAuthUI() {
+      const authContainer = document.getElementById('auth-container');
+      const adminNavBtn = document.getElementById('admin-nav-btn');
+
+      if (currentUser) {
+        authContainer.innerHTML = `
+          <div class="flex items-center gap-2 bg-slate-900 border border-slate-800 p-1.5 pr-3 rounded-xl">
+            <img src="${currentUser.avatar}" class="w-6 h-6 rounded-full border border-indigo-500">
+            <span class="text-xs text-slate-200 font-bold">${currentUser.username}</span>
+            <button onclick="logoutDiscord()" class="text-[10px] text-slate-400 hover:text-rose-400 ml-1">✕</button>
+          </div>
+        `;
+        if (currentUser.isAdmin) {
+          adminNavBtn.classList.remove('hidden');
+        } else {
+          adminNavBtn.classList.add('hidden');
+        }
+      } else {
+        authContainer.innerHTML = `
+          <button onclick="loginWithDiscord()" class="bg-[#5865F2] hover:bg-[#4752C4] text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-[#5865F2]/20 active:scale-95">
+            <svg class="w-4 h-4 fill-current" viewBox="0 0 127.14 96.36">
+              <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a73.57,73.57,0,0,0,64.32,0c.87.69,1.76,1.37,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1,105.25,105.25,0,0,0,32.19-16.14c2.64-27.38-4.51-51.11-18.95-72.15ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.92,53.87,53,48.74,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.92,96.1,53,91,65.69,84.69,65.69Z"/>
+            </svg>
+            Login with Discord
+          </button>
+        `;
+        adminNavBtn.classList.add('hidden');
+      }
+    }
+
+    async function loadBotsFromAPI() {
+      try {
+        const res = await fetch('/api/bots');
+        bots = await res.json();
+        bots = bots.map(b => ({ ...b, id: b._id || b.id }));
+        renderGallery();
+        renderAdminList();
+      } catch (err) {
+        console.error('Failed to load bots from backend API', err);
+      }
+    }
+
+    function processAndResizeImage(file, maxWidth = 600, maxHeight = 400) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+          const img = new Image();
+          img.src = event.target.result;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width, height = img.height;
+            if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
+            if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; }
+            canvas.width = width; canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/png', 0.85));
+          };
+          img.onerror = (err) => reject(err);
+        };
+        reader.onerror = (err) => reject(err);
+      });
+    }
+
+    function getAverageRating(bot) {
+      if (!bot.reviews || bot.reviews.length === 0) return 0;
+      const total = bot.reviews.reduce((sum, r) => sum + r.rating, 0);
+      return (total / bot.reviews.length).toFixed(1);
+    }
+
+    async function upvoteBot(e, botId) {
+      e.stopPropagation();
+      if (!currentUser) {
+        alert("You must log in with Discord to upvote!");
+        loginWithDiscord();
+        return;
+      }
+
+      playSound('upvote');
+      try {
+        const res = await fetch(`/api/bots/${botId}/upvote`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ discordId: currentUser.id })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          await loadBotsFromAPI();
+          const detailContainer = document.getElementById('view-details');
+          if (!detailContainer.classList.contains('hidden')) showBotDetailView(botId);
+        } else {
+          alert(data.error || 'Upvote failed.');
+        }
+      } catch (err) {
+        console.error('Upvote failed', err);
+      }
+    }
+
+    async function addReview(e, botId) {
+      e.preventDefault();
+      if (!currentUser) {
+        alert("You must log in with Discord to leave a review!");
+        loginWithDiscord();
+        return;
+      }
+
+      const rating = parseInt(document.getElementById('review-rating').value, 10);
+      const text = document.getElementById('review-text').value.trim();
+      if (!text) return;
+
+      try {
+        const res = await fetch(`/api/bots/${botId}/reviews`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            author: currentUser.username,
+            discordId: currentUser.id,
+            avatar: currentUser.avatar,
+            rating, text
+          })
+        });
+
+        if (res.ok) {
+          playSound('success');
+          await loadBotsFromAPI();
+          showBotDetailView(botId);
+        } else {
+          const errData = await res.json();
+          alert(errData.error || 'Failed to submit review');
+        }
+      } catch (err) {
+        console.error('Review failed', err);
+      }
+    }
+
+    function setCategory(cat) {
+      playSound('click');
+      selectedCategory = cat;
+      document.querySelectorAll('.category-pill').forEach(p => {
+        p.className = (p.innerText === cat)
+          ? "category-pill bg-indigo-600 text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition border border-indigo-500/30"
+          : "category-pill bg-slate-950/80 hover:bg-slate-800 text-slate-400 text-xs font-semibold px-3 py-1.5 rounded-xl transition border border-slate-800";
+      });
+      renderGallery();
+    }
+
+    function setStatusFilter(stat) {
+      playSound('click');
+      selectedStatus = stat;
+      document.querySelectorAll('.status-pill').forEach(p => {
+        const isMatch = (stat === 'All' && p.innerText.trim() === 'Any') || p.innerText.includes(stat);
+        if (isMatch) {
+          p.className = "status-pill bg-indigo-600 text-white text-[11px] font-semibold px-2.5 py-1 rounded-lg transition";
+        } else {
+          let textCol = 'text-slate-400';
+          if (p.innerText.includes('Online')) textCol = 'text-emerald-400';
+          if (p.innerText.includes('Maintenance')) textCol = 'text-amber-400';
+          if (p.innerText.includes('Updating')) textCol = 'text-sky-400';
+          if (p.innerText.includes('Offline')) textCol = 'text-rose-400';
+          p.className = `status-pill bg-slate-950 hover:bg-slate-800 ${textCol} text-[11px] font-semibold px-2.5 py-1 rounded-lg transition border border-slate-800`;
+        }
+      });
+      renderGallery();
+    }
+
+    function filterBots() { renderGallery(); }
+
+    function copyCommand(btn, cmdText) {
+      playSound('click');
+      navigator.clipboard.writeText(cmdText);
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `✓ Copied!`;
+      btn.classList.add('bg-emerald-600/20', 'text-emerald-400', 'border-emerald-500/40');
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.classList.remove('bg-emerald-600/20', 'text-emerald-400', 'border-emerald-500/40');
+      }, 1500);
+    }
+
+    function generateInviteFromID() {
+      const clientID = document.getElementById('bot-client-id').value.trim();
+      if (!clientID) return alert("Please enter a valid Client ID.");
+      document.getElementById('bot-invite').value = `https://discord.com/oauth2/authorize?client_id=${clientID}&scope=bot&permissions=8`;
+    }
+
+    function showGalleryView() {
+      playSound('click');
+      document.getElementById('view-gallery').classList.remove('hidden');
+      document.getElementById('view-details').classList.add('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showBotDetailView(botId) {
+      playSound('click');
+      const bot = bots.find(b => b.id === botId);
+      if (!bot) return;
+
+      const container = document.getElementById('bot-details-content');
+      const avgRating = getAverageRating(bot);
+      
+      let badgeStyle = bot.status === 'Online' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                       bot.status === 'Maintenance' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                       bot.status === 'Updating' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30' :
+                       'bg-rose-500/10 text-rose-400 border-rose-500/30';
+
+      const defaultBannerBg = "bg-gradient-to-r from-indigo-900 via-slate-900 to-purple-950";
+
+      const commandsList = (bot.commands || '').split('\n').filter(c => c.trim()).map(c => {
+        const cmdName = c.split(' - ')[0] || c;
+        return `
+          <div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 p-3 rounded-xl hover:border-indigo-500/30 transition">
+            <span class="font-mono text-sm text-indigo-300">${c}</span>
+            <button onclick="copyCommand(this, '${cmdName.replace(/'/g, "\\'")}')" class="text-xs bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-lg transition shrink-0 ml-2">Copy</button>
+          </div>
+        `;
+      }).join('') || '<p class="text-sm text-slate-500">No specific commands listed.</p>';
+
+      const reviewsList = (bot.reviews || []).map(r => `
+        <div class="bg-slate-900/80 border border-slate-800 p-4 rounded-xl space-y-2">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-2">
+              <img src="${r.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png'}" class="w-5 h-5 rounded-full border border-slate-700">
+              <span class="font-bold text-slate-200 text-xs">${r.author}</span>
+            </div>
+            <span class="text-amber-400 text-xs">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span>
+          </div>
+          <p class="text-slate-300 text-xs leading-relaxed">${r.text}</p>
+        </div>
+      `).join('') || '<p class="text-xs text-slate-500">No reviews yet. Be the first to leave one!</p>';
+
+      container.innerHTML = `
+        <div class="h-48 w-full relative ${!bot.banner ? defaultBannerBg : ''}">
+          ${bot.banner ? `<img src="${bot.banner}" class="w-full h-full object-cover">` : ''}
+          <div class="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-transparent to-transparent"></div>
+        </div>
+
+        <div class="px-8 pb-8 relative -mt-16">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-6">
+            <div class="flex items-end gap-4">
+              <img src="${bot.avatar}" class="w-24 h-24 rounded-2xl bg-slate-950 object-cover border-4 border-[#0f172a] shadow-xl">
+              <div>
+                <div class="flex items-center gap-2">
+                  <h2 class="text-2xl font-black text-white tracking-wide">${bot.name}</h2>
+                  ${bot.verified ? `<span title="Verified Bot" class="text-indigo-400">☑️</span>` : ''}
+                </div>
+                <div class="flex items-center gap-2 mt-2">
+                  <span class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-0.5 rounded-full border ${badgeStyle}">
+                    ● ${bot.status}
+                  </span>
+                  ${bot.category ? `<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full border border-slate-800 bg-slate-950 text-slate-400">${bot.category}</span>` : ''}
+                  ${bot.featured ? `<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400">⭐ Featured</span>` : ''}
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <button onclick="upvoteBot(event, '${bot.id}')" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-semibold px-4 py-2.5 rounded-xl text-sm transition flex items-center gap-1.5 active:scale-95">
+                ❤️ Upvote <span class="font-bold">(${bot.votes || 0})</span>
+              </button>
+              <a href="${bot.invite}" target="_blank" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-2.5 rounded-xl text-sm transition shadow-lg shadow-indigo-600/25">
+                Invite ${bot.name}
+              </a>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 text-xs">
+            <div><span class="text-slate-500">Rating:</span> <span class="font-bold text-amber-400">⭐ ${avgRating > 0 ? avgRating : 'N/A'}</span></div>
+            <div><span class="text-slate-500">Servers:</span> <span class="font-bold text-slate-200">${bot.servers || '1.0k+'}</span></div>
+            <div><span class="text-slate-500">Speed:</span> <span class="font-bold text-emerald-400">${bot.ping || '20ms'}</span></div>
+            <div><span class="text-slate-500">Upvotes:</span> <span class="font-bold text-rose-400">${bot.votes || 0}</span></div>
+          </div>
+
+          <p class="text-slate-300 text-sm leading-relaxed mb-8 border-b border-slate-800 pb-6">${bot.description}</p>
+
+          <div class="space-y-6">
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800">
+              <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-3">⚡ Commands</h3>
+              <div class="space-y-2">${commandsList}</div>
+            </div>
+
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800">
+              <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-3">📖 Usage Guide</h3>
+              <p class="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">${bot.usage || 'No usage guide available.'}</p>
+            </div>
+
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800 space-y-4">
+              <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">💬 Community Reviews (${(bot.reviews || []).length})</h3>
+              
+              ${currentUser ? `
+                <form onsubmit="addReview(event, '${bot.id}')" class="bg-slate-900/60 p-4 rounded-xl border border-slate-800/80 space-y-3">
+                  <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                      <img src="${currentUser.avatar}" class="w-6 h-6 rounded-full border border-indigo-500">
+                      <span class="text-xs text-slate-200 font-bold">Reviewing as ${currentUser.username}</span>
+                    </div>
+                    <select id="review-rating" class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-amber-400 focus:outline-none focus:border-indigo-500">
+                      <option value="5">⭐⭐⭐⭐⭐ (5/5)</option>
+                      <option value="4">⭐⭐⭐⭐☆ (4/5)</option>
+                      <option value="3">⭐⭐⭐☆☆ (3/5)</option>
+                      <option value="2">⭐⭐☆☆☆ (2/5)</option>
+                      <option value="1">⭐☆☆☆☆ (1/5)</option>
+                    </select>
+                  </div>
+                  <textarea id="review-text" placeholder="Write your thoughts..." required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 h-16 focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+                  <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs px-4 py-2 rounded-lg transition">Submit Review</button>
+                </form>
+              ` : `
+                <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 text-center space-y-2">
+                  <p class="text-xs text-slate-400">Log in with Discord to write a review.</p>
+                  <button onclick="loginWithDiscord()" class="bg-[#5865F2] hover:bg-[#4752C4] text-white px-4 py-1.5 rounded-lg text-xs font-bold transition">Login</button>
+                </div>
+              `}
+
+              <div class="space-y-2 mt-4">${reviewsList}</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('view-gallery').classList.add('hidden');
+      document.getElementById('view-details').classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function renderGallery() {
+      const grid = document.getElementById('bot-grid');
+      const searchQuery = document.getElementById('search-input')?.value.toLowerCase() || '';
+      const sortVal = document.getElementById('sort-select')?.value || 'popular';
+
+      let filteredBots = bots.filter(bot => {
+        const matchesCategory = selectedCategory === 'All' || bot.category === selectedCategory;
+        const matchesStatus = selectedStatus === 'All' || bot.status === selectedStatus;
+        const matchesSearch = bot.name.toLowerCase().includes(searchQuery) || bot.description.toLowerCase().includes(searchQuery);
+        return matchesCategory && matchesStatus && matchesSearch;
+      });
+
+      filteredBots.sort((a, b) => {
+        if (sortVal === 'popular') return (b.votes || 0) - (a.votes || 0);
+        if (sortVal === 'rating') return getAverageRating(b) - getAverageRating(a);
+        if (sortVal === 'name') return a.name.localeCompare(b.name);
+        return 0;
+      });
+
+      if (filteredBots.length === 0) {
+        grid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-500"><p class="text-base font-semibold">No bots found matching your filters.</p></div>`;
+        return;
+      }
+
+      grid.innerHTML = filteredBots.map((bot, idx) => {
+        let badgeStyle = bot.status === 'Online' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                         bot.status === 'Maintenance' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                         bot.status === 'Updating' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30' :
+                         'bg-rose-500/10 text-rose-400 border-rose-500/30';
+
+        const defaultBannerBg = "bg-gradient-to-r from-indigo-900/60 to-purple-950/60";
+        const avgRating = getAverageRating(bot);
+
+        return `
+          <div onclick="showBotDetailView('${bot.id}')" class="animate-fade-in bg-slate-900/60 border ${bot.featured ? 'border-amber-500/40 shadow-lg shadow-amber-500/5' : 'border-slate-800/90'} hover:border-indigo-500/50 rounded-2xl overflow-hidden backdrop-blur-md transition-all duration-300 hover:-translate-y-1 cursor-pointer group flex flex-col justify-between" style="animation-delay: ${idx * 0.05}s">
+            <div>
+              <div class="h-28 w-full relative overflow-hidden ${!bot.banner ? defaultBannerBg : ''}">
+                ${bot.banner ? `<img src="${bot.banner}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">` : ''}
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/30 to-transparent"></div>
+                ${bot.featured ? `<span class="absolute top-3 left-3 bg-amber-500 text-black text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow">⭐ Featured</span>` : ''}
+              </div>
+
+              <div class="px-6 pb-4 relative">
+                <div class="flex justify-between items-end -mt-10 mb-3">
+                  <img src="${bot.avatar}" class="w-16 h-16 rounded-2xl bg-slate-950 object-cover border-2 border-slate-800 shadow-lg">
+                  <span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${badgeStyle}">
+                    ● ${bot.status}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between mb-1.5">
+                  <div class="flex items-center gap-1.5">
+                    <h3 class="font-bold text-xl text-white group-hover:text-indigo-400 transition-colors">${bot.name}</h3>
+                    ${bot.verified ? `<span title="Verified Bot" class="text-indigo-400 text-xs">☑️</span>` : ''}
+                  </div>
+                  ${bot.category ? `<span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-400">${bot.category}</span>` : ''}
+                </div>
+                
+                <div class="flex items-center gap-1 text-xs text-amber-400 mb-2 font-semibold">
+                  <span>⭐ ${avgRating > 0 ? avgRating : 'New'}</span>
+                  <span class="text-slate-500 text-[11px]">(${(bot.reviews || []).length} reviews)</span>
+                </div>
+
+                <p class="text-slate-400 text-sm line-clamp-2 leading-relaxed mb-4">${bot.description}</p>
+                
+                <div class="flex items-center justify-between text-xs text-slate-500 border-t border-slate-800/60 pt-3">
+                  <div class="flex items-center gap-3">
+                    <span>🌐 ${bot.servers || '1.0k+'}</span>
+                    <span>⚡ ${bot.ping || '20ms'}</span>
+                  </div>
+                  <button onclick="upvoteBot(event, '${bot.id}')" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 px-2.5 py-1 rounded-lg text-xs font-semibold transition active:scale-95 flex items-center gap-1">
+                    ❤️ ${bot.votes || 0}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="px-6 pb-6 pt-2">
+              <div class="w-full text-center bg-indigo-600/15 group-hover:bg-indigo-600 border border-indigo-500/30 group-hover:border-indigo-600 text-indigo-300 group-hover:text-white font-medium py-2.5 rounded-xl text-xs transition-all duration-300">
+                View Bot Info & Commands →
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderAdminList() {
+      const container = document.getElementById('admin-bot-list');
+      container.innerHTML = bots.map(bot => `
+        <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-3">
+            <img src="${bot.avatar}" class="w-8 h-8 rounded-lg bg-slate-900 object-cover border border-slate-800">
+            <div>
+              <span class="font-semibold text-sm text-slate-200 block">${bot.name}</span>
+              <span class="text-[10px] text-slate-500">${bot.category || 'General'}</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="startEditBot('${bot.id}')" class="text-xs bg-indigo-950 hover:bg-indigo-900 text-indigo-300 px-3 py-1.5 rounded-lg border border-indigo-800/60 transition">Edit</button>
+            <button onclick="deleteBot('${bot.id}')" class="text-xs bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 px-3 py-1.5 rounded-lg border border-rose-800/60 transition">Delete</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function startEditBot(id) {
+      const bot = bots.find(b => b.id === id);
+      if (!bot) return;
+
+      document.getElementById('editing-bot-id').value = bot.id;
+      document.getElementById('bot-name').value = bot.name;
+      document.getElementById('bot-category').value = bot.category || "Music";
+      document.getElementById('bot-invite').value = bot.invite;
+      document.getElementById('bot-servers').value = bot.servers || "";
+      document.getElementById('bot-ping').value = bot.ping || "";
+      document.getElementById('bot-status').value = bot.status;
+      document.getElementById('bot-featured').checked = bot.featured || false;
+      document.getElementById('bot-verified').checked = bot.verified || false;
+      document.getElementById('bot-desc').value = bot.description;
+      document.getElementById('bot-commands').value = bot.commands || "";
+      document.getElementById('bot-usage').value = bot.usage || "";
+      document.getElementById('bot-config').value = bot.config || "";
+
+      document.getElementById('bot-avatar-file').required = false;
+      document.getElementById('form-title').innerText = `Edit "${bot.name}"`;
+      document.getElementById('submit-btn').innerText = "Save Changes";
+      document.getElementById('cancel-edit-btn').classList.remove('hidden');
+      document.getElementById('current-avatar-notice').classList.remove('hidden');
+
+      document.getElementById('bot-form').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function resetForm() {
+      document.getElementById('bot-form').reset();
+      document.getElementById('editing-bot-id').value = "";
+      document.getElementById('bot-avatar-file').required = true;
+      document.getElementById('form-title').innerText = "Add New Bot";
+      document.getElementById('submit-btn').innerText = "Add Bot";
+      document.getElementById('cancel-edit-btn').classList.add('hidden');
+      document.getElementById('current-avatar-notice').classList.add('hidden');
+    }
+
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+
+      const editingId = document.getElementById('editing-bot-id').value.trim();
+      const avatarFile = document.getElementById('bot-avatar-file').files[0];
+      const bannerFile = document.getElementById('bot-banner-file').files[0];
+
+      let avatarBase64 = null, bannerBase64 = null;
+      if (avatarFile) avatarBase64 = await processAndResizeImage(avatarFile, 256, 256);
+      if (bannerFile) bannerBase64 = await processAndResizeImage(bannerFile, 800, 300);
+
+      const existingBot = editingId ? bots.find(b => b.id === editingId) : null;
+      if (!editingId && !avatarBase64) return alert("Please upload an Avatar Image.");
+
+      const payload = {
+        name: document.getElementById('bot-name').value.trim(),
+        category: document.getElementById('bot-category').value,
+        featured: document.getElementById('bot-featured').checked,
+        verified: document.getElementById('bot-verified').checked,
+        invite: document.getElementById('bot-invite').value.trim(),
+        servers: document.getElementById('bot-servers').value.trim() || '1.0k+',
+        ping: document.getElementById('bot-ping').value.trim() || '20ms',
+        status: document.getElementById('bot-status').value,
+        description: document.getElementById('bot-desc').value.trim(),
+        commands: document.getElementById('bot-commands').value.trim(),
+        usage: document.getElementById('bot-usage').value.trim(),
+        config: document.getElementById('bot-config').value.trim(),
+        avatar: avatarBase64 || (existingBot ? existingBot.avatar : ''),
+        banner: bannerBase64 || (existingBot ? existingBot.banner : '')
+      };
+
+      if (editingId) payload.id = editingId;
+
+      try {
+        const res = await fetch('/api/bots/manage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          playSound('success');
+          await loadBotsFromAPI();
+          resetForm();
+          closeAdminModal();
+        } else {
+          const errData = await res.json();
+          alert(`Error: ${errData.error || 'Save failed'}`);
+        }
+      } catch (err) {
+        console.error('Failed to save bot:', err);
+      }
+    }
+
+    async function deleteBot(id) {
+      if (confirm('Are you sure you want to delete this bot?')) {
+        try {
+          const res = await fetch(`/api/bots/${id}`, { method: 'DELETE' });
+          if (res.ok) {
+            await loadBotsFromAPI();
+            showGalleryView();
+          }
+        } catch (err) {
+          console.error('Delete failed', err);
+        }
+      }
+    }
+
+    function openAdminModal() { document.getElementById('admin-modal').classList.remove('hidden'); }
+    function closeAdminModal() { document.getElementById('admin-modal').classList.add('hidden'); }
+
+    function authenticateAdmin() {
+      const pin = document.getElementById('admin-pin').value;
+      if (pin === ADMIN_PIN || (currentUser && currentUser.isAdmin)) {
+        playSound('success');
+        document.getElementById('auth-section').classList.add('hidden');
+        document.getElementById('admin-controls').classList.remove('hidden');
+        renderAdminList();
+      } else {
+        alert('Incorrect PIN');
+      }
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        openAdminModal();
+      }
+    });
+
+    // --- Snow Background Animation ---
+    const canvas = document.getElementById('snow-canvas');
+    const ctx = canvas.getContext('2d');
+    let flakes = [];
+
+    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    function createSnowflakes() {
+      flakes = [];
+      const count = Math.floor(window.innerWidth / 12);
+      for (let i = 0; i < count; i++) {
+        flakes.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          radius: Math.random() * 2 + 0.5,
+          speed: Math.random() * 0.8 + 0.3,
+          wind: Math.random() * 0.5 - 0.25,
+          opacity: Math.random() * 0.5 + 0.2
+        });
+      }
+    }
+
+    function drawSnow() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      flakes.forEach(f => {
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${f.opacity})`;
+        ctx.fill();
+
+        f.y += f.speed;
+        f.x += f.wind;
+
+        if (f.y > canvas.height) { f.y = -5; f.x = Math.random() * canvas.width; }
+        if (f.x > canvas.width) f.x = 0;
+        if (f.x < 0) f.x = canvas.width;
+      });
+      requestAnimationFrame(drawSnow);
+    }
+
+    window.addEventListener('resize', () => { resizeCanvas(); createSnowflakes(); });
+    resizeCanvas(); createSnowflakes(); drawSnow();
+
+    // Init
+    updateAuthUI();
+    loadBotsFromAPI();
+  </script>
+</body>
+</html>
