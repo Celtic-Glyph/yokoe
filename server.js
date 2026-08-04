@@ -5,7 +5,7 @@ const cors = require('cors');
 const axios = require('axios');
 const path = require('path');
 
-// Reliable Discord Webhook Notification Helper
+// Reliable Discord Webhook Notification Helper (KEEP THIS ONE ONLY)
 async function sendDiscordWebhook(title, description, botData, color = 0x5865F2) {
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   if (!webhookUrl) return;
@@ -57,42 +57,7 @@ async function sendDiscordWebhook(title, description, botData, color = 0x5865F2)
     await axios.post(webhookUrl, payload);
     console.log('✅ Discord Webhook delivered successfully!');
   } catch (err) {
-    // Detailed error print so we can see Discord's exact response if it fails
     console.error('❌ DISCORD REJECTED PAYLOAD:', err.response ? err.response.data : err.message);
-  }
-}
-
-// Function to send rich Discord Webhook embeds
-async function sendDiscordWebhook(title, description, botData, color = 0x5865F2) {
-  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
-  if (!webhookUrl) return;
-
-  try {
-    await axios.post(webhookUrl, {
-      embeds: [
-        {
-          title: title,
-          description: description,
-          color: color, // 0x5865F2 is Discord Blue
-          thumbnail: {
-            url: botData.avatar || 'https://i.imgur.com/8N3Oa6E.png'
-          },
-          fields: [
-            { name: '🤖 Bot Name', value: botData.name || 'N/A', inline: true },
-            { name: '🏷️ Category', value: botData.category || 'Utility', inline: true },
-            { name: '👤 Owner ID', value: botData.ownerId ? `<@${botData.ownerId}>` : 'Anonymous', inline: true },
-            { name: '🔗 Invite Link', value: botData.inviteUrl ? `[Click to Invite](${botData.inviteUrl})` : 'None', inline: false }
-          ],
-          timestamp: new Date().toISOString(),
-          footer: {
-            text: 'Yokoe Bot Directory',
-            icon_url: 'https://i.imgur.com/8N3Oa6E.png'
-          }
-        }
-      ]
-    });
-  } catch (err) {
-    console.error('Webhook notification error:', err.message);
   }
 }
 
@@ -102,7 +67,6 @@ const app = express();
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'landing.html'));
 });
-
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
