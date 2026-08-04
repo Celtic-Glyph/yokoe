@@ -159,7 +159,7 @@ app.post('/api/bots/manage', async (req, res) => {
       await savedBot.save();
 
       // 🚀 Send Discord Webhook alert for NEW bots!
-      sendDiscordWebhook(
+      await sendDiscordWebhook(
         '🎉 New Bot Added!',
         `**${savedBot.name}** was just listed on the Yokoe Directory.`,
         savedBot,
