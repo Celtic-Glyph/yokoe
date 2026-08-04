@@ -8,25 +8,26 @@ const path = require('path');
 // Function to send rich Discord Webhook embeds
 async function sendDiscordWebhook(title, description, botData, color = 0x5865F2) {
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
-
-  if (!webhookUrl) {
-    console.log('⚠️ WEBHOOK ERROR: DISCORD_WEBHOOK_URL environment variable is missing!');
-    return;
-  }
-
-  console.log('🚀 Attempting to send Discord webhook...');
+  if (!webhookUrl) return;
 
   try {
+    // 1. Ensure thumbnail URL is valid or fallback to default
+    let avatarUrl = 'https://i.imgur.com/8N3Oa6E.png';
+    if (botData.avatar && typeof botData.avatar === 'string' && botData.avatar.startsWith('http')) {
+      avatarUrl = botData.avatar;
+    }
+
+    // 2. Build base payload
     const payload = {
       embeds: [
         {
-          title: title,
-          description: description,
+          title: String(title || 'New Notification'),
+          description: String(description || ''),
           color: color,
-          thumbnail: botData.avatar ? { url: botData.avatar } : undefined,
+          thumbnail: { url: avatarUrl },
           fields: [
-            { name: '🤖 Bot Name', value: botData.name || 'N/A', inline: true },
-            { name: '🏷️ Category', value: botData.category || 'Utility', inline: true },
+            { name: '🤖 Bot Name', value: String(botData.name || 'N/A'), inline: true },
+            { name: '🏷️ Category', value: String(botData.category || 'Utility'), inline: true },
             { name: '👤 Owner ID', value: botData.ownerId ? `<@${botData.ownerId}>` : 'Anonymous', inline: true }
           ],
           timestamp: new Date().toISOString(),
@@ -35,7 +36,8 @@ async function sendDiscordWebhook(title, description, botData, color = 0x5865F2)
       ]
     };
 
-    if (botData.inviteUrl && botData.inviteUrl.startsWith('http')) {
+    // 3. Only add invite link field if it's a valid http URL
+    if (botData.inviteUrl && typeof botData.inviteUrl === 'string' && botData.inviteUrl.startsWith('http')) {
       payload.embeds[0].fields.push({
         name: '🔗 Invite Link',
         value: `[Click to Invite](${botData.inviteUrl})`,
@@ -43,10 +45,10 @@ async function sendDiscordWebhook(title, description, botData, color = 0x5865F2)
       });
     }
 
-    const response = await axios.post(webhookUrl, payload);
-    console.log('✅ Webhook sent successfully! Discord status:', response.status);
+    await axios.post(webhookUrl, payload);
+    console.log('✅ Discord Webhook delivered successfully!');
   } catch (err) {
-    console.error('❌ DISCORD WEBHOOK FAILED:', err.response ? err.response.data : err.message);
+    console.error('Webhook notification error:', err.response ? err.response.data : err.message);
   }
 }
 
