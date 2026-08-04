@@ -174,12 +174,33 @@ app.post('/api/bots/manage', async (req, res) => {
     let savedBot;
 
     if (id && mongoose.Types.ObjectId.isValid(id)) {
+      // --- UPDATING AN EXISTING BOT ---
       savedBot = await Bot.findByIdAndUpdate(id, botData, { new: true, runValidators: true });
+
+      if (savedBot.status === 'Maintenance') {
+        // 🟠 Orange alert for Maintenance Mode
+        await sendDiscordWebhook(
+          '🛠️ Bot Under Maintenance',
+          `**${savedBot.name}** has entered maintenance mode.`,
+          savedBot,
+          0xE67E22
+        );
+      } else {
+        // 🟡 Yellow alert for general updates
+        await sendDiscordWebhook(
+          '✏️ Bot Updated',
+          `**${savedBot.name}** details or status were updated on the directory.`,
+          savedBot,
+          0xFEE75C
+        );
+      }
+
     } else {
+      // --- ADDING A NEW BOT ---
       savedBot = new Bot(botData);
       await savedBot.save();
 
-      // 🚀 CALL the function here!
+      // 🟢 Green alert for NEW bots
       await sendDiscordWebhook(
         '🎉 New Bot Added!',
         `**${savedBot.name}** was just listed on the Yokoe Directory.`,
@@ -198,10 +219,23 @@ app.post('/api/bots/manage', async (req, res) => {
 // Delete Bot
 app.delete('/api/bots/:id', async (req, res) => {
   try {
-    await Bot.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
+    const deletedBot = await Bot.findByIdAndDelete(req.params.id);
+
+    if (!deletedBot) {
+      return res.status(404).json({ error: 'Bot not found' });
+    }
+
+    // 🔴 Send Discord alert for DELETED bots
+    await sendDiscordWebhook(
+      '🗑️ Bot Removed',
+      `**${deletedBot.name}** was removed from the Yokoe Directory.`,
+      deletedBot,
+      0xED4245 // Red color
+    );
+
+    res.json({ message: 'Bot deleted successfully' });
   } catch (err) {
-    res.status(400).json({ error: 'Delete failed' });
+    res.status(500).json({ error: err.message });
   }
 });
 
