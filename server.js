@@ -5,13 +5,13 @@ const cors = require('cors');
 const axios = require('axios');
 const path = require('path');
 
-// Reliable Discord Webhook Notification Helper (KEEP THIS ONE ONLY)
+// Reliable Discord Webhook Notification Helper
 async function sendDiscordWebhook(title, description, botData, color = 0x5865F2) {
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   if (!webhookUrl) return;
 
   // 1. Strict URL check for avatar (Ignores base64 'data:image...' strings)
-  let avatarUrl = 'https://i.imgur.com/8N3Oa6E.png';
+  let avatarUrl = 'https://cdn.discordapp.com/embed/avatars/0.png';
   if (
     botData.avatar && 
     typeof botData.avatar === 'string' && 
@@ -42,13 +42,13 @@ async function sendDiscordWebhook(title, description, botData, color = 0x5865F2)
 
   // 3. Strict URL check for invite link
   if (
-    botData.inviteUrl && 
-    typeof botData.inviteUrl === 'string' && 
-    botData.inviteUrl.toLowerCase().startsWith('http')
+    botData.invite && 
+    typeof botData.invite === 'string' && 
+    botData.invite.toLowerCase().startsWith('http')
   ) {
     payload.embeds[0].fields.push({
       name: '🔗 Invite Link',
-      value: `[Click to Invite](${botData.inviteUrl})`,
+      value: `[Click to Invite](${botData.invite})`,
       inline: false
     });
   }
@@ -78,21 +78,23 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB Connected Successfully'))
   .catch(err => console.error('MongoDB Connection Error:', err));
 
-// Database Schema
+// Database Schema (Includes Webhooks & Analytics)
 const BotSchema = new mongoose.Schema({
   name: { type: String, required: true },
   category: { type: String, default: 'Utility' },
   servers: { type: String, default: '1.0k+' },
   ping: { type: String, default: '20ms' },
   votes: { type: Number, default: 0 },
+  views: { type: Number, default: 0 },         // 📈 Page Views
+  inviteClicks: { type: Number, default: 0 },  // 📈 Invite Clicks
   votedUsers: [{
     discordId: String,
     votedAt: { type: Date, default: Date.now }
   }],
-  // 🌟 NEW WEBHOOK FIELDS FOR DEVELOPERS
+  // Developer Webhook Settings
   webhookUrl: { type: String, default: '' },
   webhookSecret: { type: String, default: '' },
-  
+
   featured: { type: Boolean, default: false },
   verified: { type: Boolean, default: false },
   avatar: { type: String, required: true },
@@ -125,7 +127,7 @@ app.get('/api/bots', async (req, res) => {
   }
 });
 
-// Upvote Endpoint with Developer Webhook Notification
+// Upvote Endpoint with 12-Hour Cooldown & Developer Webhook Notification
 app.post('/api/bots/:id/upvote', async (req, res) => {
   try {
     const { discordId, username } = req.body;
@@ -134,7 +136,6 @@ app.post('/api/bots/:id/upvote', async (req, res) => {
     const bot = await Bot.findById(req.params.id);
     if (!bot) return res.status(404).json({ error: 'Bot not found.' });
 
-    // Check 12-hour cooldown
     const existingVote = bot.votedUsers.find(v => v.discordId === discordId);
     if (existingVote) {
       const hoursSinceVote = (new Date() - new Date(existingVote.votedAt)) / (1000 * 60 * 60);
@@ -150,8 +151,8 @@ app.post('/api/bots/:id/upvote', async (req, res) => {
     bot.votes += 1;
     await bot.save();
 
-    // 🚀 TRIGGER DEVELOPER VOTE WEBHOOK
-    if (bot.webhookUrl && bot.webhookUrl.startsWith('http')) {
+    // 🚀 TRIGGER DEVELOPER VOTE WEBHOOK (If configured by developer)
+    if (bot.webhookUrl && bot.webhookUrl.toLowerCase().startsWith('http')) {
       const votePayload = {
         botId: bot._id,
         userId: discordId,
@@ -161,11 +162,10 @@ app.post('/api/bots/:id/upvote', async (req, res) => {
         totalVotes: bot.votes
       };
 
-      // Send post request in background so user doesn't wait
       axios.post(bot.webhookUrl, votePayload, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': bot.webhookSecret || '' // Pass authorization key if dev set one
+          'Authorization': bot.webhookSecret || ''
         },
         timeout: 5000
       }).then(() => {
@@ -178,6 +178,57 @@ app.post('/api/bots/:id/upvote', async (req, res) => {
     res.json(bot);
   } catch (err) {
     res.status(400).json({ error: 'Upvote failed.' });
+  }
+});
+
+// 📈 Increment Page View Counter Endpoint
+app.post('/api/bots/:id/view', async (req, res) => {
+  try {
+    const bot = await Bot.findByIdAndUpdate(
+      req.params.id, 
+      { $inc: { views: 1 } }, 
+      { new: true }
+    );
+    res.json({ views: bot ? bot.views : 0 });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to record view' });
+  }
+});
+
+// 📈 Track Invite Button Clicks Endpoint
+app.post('/api/bots/:id/invite-click', async (req, res) => {
+  try {
+    const bot = await Bot.findByIdAndUpdate(
+      req.params.id, 
+      { $inc: { inviteClicks: 1 } }, 
+      { new: true }
+    );
+    res.json({ inviteClicks: bot ? bot.inviteClicks : 0 });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to record click' });
+  }
+});
+
+// ⚡ Auto-Sync Bot Info via Discord Public User API
+app.get('/api/bots/sync-discord/:clientId', async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const response = await axios.get(`https://discord.com/api/v10/users/${clientId}`, {
+      headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN || ''}` }
+    });
+
+    const botData = response.data;
+    const avatarUrl = botData.avatar 
+      ? `https://cdn.discordapp.com/avatars/${botData.id}/${botData.avatar}.png?size=512`
+      : 'https://cdn.discordapp.com/embed/avatars/0.png';
+
+    res.json({
+      name: botData.username,
+      avatar: avatarUrl,
+      id: botData.id
+    });
+  } catch (err) {
+    res.status(400).json({ error: 'Could not fetch Discord bot info. Check your Client ID.' });
   }
 });
 
@@ -198,7 +249,7 @@ app.post('/api/bots/:id/reviews', async (req, res) => {
   }
 });
 
-// Admin Manage Endpoint (Add / Edit Bot)
+// Admin Manage Endpoint (Add / Edit Bot + Discord Alerts)
 app.post('/api/bots/manage', async (req, res) => {
   try {
     const { id, ...botData } = req.body;
@@ -209,7 +260,7 @@ app.post('/api/bots/manage', async (req, res) => {
       savedBot = await Bot.findByIdAndUpdate(id, botData, { new: true, runValidators: true });
 
       if (savedBot.status === 'Maintenance') {
-        // 🟠 Orange alert for Maintenance Mode
+        // 🟠 Maintenance Alert
         await sendDiscordWebhook(
           '🛠️ Bot Under Maintenance',
           `**${savedBot.name}** has entered maintenance mode.`,
@@ -217,7 +268,7 @@ app.post('/api/bots/manage', async (req, res) => {
           0xE67E22
         );
       } else {
-        // 🟡 Yellow alert for general updates
+        // 🟡 General Update Alert
         await sendDiscordWebhook(
           '✏️ Bot Updated',
           `**${savedBot.name}** details or status were updated on the directory.`,
@@ -231,7 +282,7 @@ app.post('/api/bots/manage', async (req, res) => {
       savedBot = new Bot(botData);
       await savedBot.save();
 
-      // 🟢 Green alert for NEW bots
+      // 🟢 New Bot Alert
       await sendDiscordWebhook(
         '🎉 New Bot Added!',
         `**${savedBot.name}** was just listed on the Yokoe Directory.`,
@@ -247,7 +298,7 @@ app.post('/api/bots/manage', async (req, res) => {
   }
 });
 
-// Delete Bot
+// Delete Bot + Discord Alert
 app.delete('/api/bots/:id', async (req, res) => {
   try {
     const deletedBot = await Bot.findByIdAndDelete(req.params.id);
@@ -256,12 +307,12 @@ app.delete('/api/bots/:id', async (req, res) => {
       return res.status(404).json({ error: 'Bot not found' });
     }
 
-    // 🔴 Send Discord alert for DELETED bots
+    // 🔴 Delete Alert
     await sendDiscordWebhook(
       '🗑️ Bot Removed',
       `**${deletedBot.name}** was removed from the Yokoe Directory.`,
       deletedBot,
-      0xED4245 // Red color
+      0xED4245
     );
 
     res.json({ message: 'Bot deleted successfully' });
