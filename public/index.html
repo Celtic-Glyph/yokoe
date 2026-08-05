@@ -139,7 +139,7 @@
       </div>
 
       <div id="auth-section" class="space-y-4 py-4">
-        <p class="text-sm text-slate-300">Enter PIN (Default: <code class="bg-slate-950 px-2 py-0.5 rounded border border-slate-800 text-indigo-400">1234</code>):</p>
+        <p class="text-sm text-slate-300">Enter PIN (Default: <code class="bg-slate-950 px-2 py-0.5 rounded border border-slate-800 text-indigo-400">0829</code>):</p>
         <div class="flex gap-2">
           <input type="password" id="admin-pin" class="bg-slate-950 border border-slate-700/80 rounded-xl px-4 py-2 text-sm w-full focus:outline-none focus:border-indigo-500 transition" placeholder="Enter PIN">
           <button onclick="authenticateAdmin()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-xl text-sm font-medium transition shadow-lg shadow-indigo-600/20">Unlock</button>
@@ -247,7 +247,24 @@
               <textarea id="bot-config" placeholder="Setup or permissions needed..." class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm h-16 focus:outline-none focus:border-indigo-500 transition resize-none"></textarea>
             </div>
           </div>
-          
+
+          <!-- 🌟 NEW DEVELOPER VOTE WEBHOOK SETTINGS 🌟 -->
+          <div class="border-t border-slate-800 pt-3 space-y-3">
+            <h4 class="text-xs font-semibold text-indigo-400 flex items-center gap-1.5">
+              <span>🔔</span> Developer Vote Webhook Settings
+            </h4>
+            <div>
+              <label class="text-[11px] text-slate-400 mb-1 block">Webhook Endpoint URL</label>
+              <input type="url" id="bot-webhook-url" placeholder="https://your-bot-server.com/api/vote-webhook" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 transition">
+              <span class="text-[10px] text-slate-500 mt-1 block">Yokoe will send an HTTP POST request to this endpoint whenever a user votes for this bot.</span>
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 mb-1 block">Webhook Secret Token (Optional)</label>
+              <input type="text" id="bot-webhook-secret" placeholder="e.g. secret_auth_token_123" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 transition">
+              <span class="text-[10px] text-slate-500 mt-1 block">Sent in the 'Authorization' header so your bot server can authenticate Yokoe.</span>
+            </div>
+          </div>
+
           <button type="submit" id="submit-btn" class="w-full bg-emerald-600 hover:bg-emerald-500 py-2.5 rounded-lg text-sm font-semibold transition shadow-lg shadow-emerald-600/20">Add Bot</button>
         </form>
 
@@ -260,7 +277,7 @@
   </div>
 
   <script>
-    const ADMIN_PIN = "1234";
+    const ADMIN_PIN = "0829";
     let bots = [];
     let selectedCategory = "All";
     let selectedStatus = "All";
@@ -407,7 +424,10 @@
         const res = await fetch(`/api/bots/${botId}/upvote`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ discordId: currentUser.id })
+          body: JSON.stringify({ 
+            discordId: currentUser.id,
+            username: currentUser.username 
+          })
         });
         const data = await res.json();
         if (res.ok) {
@@ -565,78 +585,72 @@
             <div class="flex items-end gap-4">
               <img src="${bot.avatar}" class="w-24 h-24 rounded-2xl bg-slate-950 object-cover border-4 border-[#0f172a] shadow-xl">
               <div>
-                <div class="flex items-center gap-2">
-                  <h2 class="text-2xl font-black text-white tracking-wide">${bot.name}</h2>
-                  ${bot.verified ? `<span title="Verified Bot" class="text-indigo-400">☑️</span>` : ''}
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h2 class="text-2xl font-black text-white">${bot.name}</h2>
+                  ${bot.verified ? '<span class="text-indigo-400 text-sm" title="Verified Bot">☑️</span>' : ''}
+                  ${bot.featured ? '<span class="text-amber-400 text-sm" title="Featured Bot">⭐</span>' : ''}
+                  <span class="text-xs border px-2.5 py-0.5 rounded-full font-semibold ${badgeStyle}">${bot.status}</span>
                 </div>
-                <div class="flex items-center gap-2 mt-2">
-                  <span class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-0.5 rounded-full border ${badgeStyle}">
-                    ● ${bot.status}
-                  </span>
-                  ${bot.category ? `<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full border border-slate-800 bg-slate-950 text-slate-400">${bot.category}</span>` : ''}
-                  ${bot.featured ? `<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400">⭐ Featured</span>` : ''}
-                </div>
+                <p class="text-xs text-slate-400 mt-1">${bot.category} • ${bot.servers || '1.0k+'} servers • ${bot.ping || '20ms'}</p>
               </div>
             </div>
-            <div class="flex items-center gap-3">
-              <button onclick="upvoteBot(event, '${bot.id}')" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-semibold px-4 py-2.5 rounded-xl text-sm transition flex items-center gap-1.5 active:scale-95">
-                ❤️ Upvote <span class="font-bold">(${bot.votes || 0})</span>
+
+            <div class="flex gap-2 w-full sm:w-auto">
+              <button onclick="upvoteBot(event, '${bot.id}')" class="flex-1 sm:flex-none bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 font-bold px-4 py-2 rounded-xl text-xs transition flex items-center justify-center gap-2">
+                ❤️ Upvote (${bot.votes || 0})
               </button>
-              <a href="${bot.invite}" target="_blank" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-2.5 rounded-xl text-sm transition shadow-lg shadow-indigo-600/25">
-                Invite ${bot.name}
+              <a href="${bot.invite}" target="_blank" class="flex-1 sm:flex-none bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2 rounded-xl text-xs transition text-center shadow-lg shadow-indigo-600/20">
+                Invite Bot 🔗
               </a>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 text-xs">
-            <div><span class="text-slate-500">Rating:</span> <span class="font-bold text-amber-400">⭐ ${avgRating > 0 ? avgRating : 'N/A'}</span></div>
-            <div><span class="text-slate-500">Servers:</span> <span class="font-bold text-slate-200">${bot.servers || '1.0k+'}</span></div>
-            <div><span class="text-slate-500">Speed:</span> <span class="font-bold text-emerald-400">${bot.ping || '20ms'}</span></div>
-            <div><span class="text-slate-500">Upvotes:</span> <span class="font-bold text-rose-400">${bot.votes || 0}</span></div>
-          </div>
+          <div class="space-y-6 border-t border-slate-800/80 pt-6">
+            <div>
+              <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">About</h3>
+              <p class="text-slate-300 text-sm leading-relaxed">${bot.description}</p>
+            </div>
 
-          <p class="text-slate-300 text-sm leading-relaxed mb-8 border-b border-slate-800 pb-6">${bot.description}</p>
+            ${bot.usage ? `
+              <div>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Usage Guide</h3>
+                <p class="text-slate-300 text-xs bg-slate-950/60 border border-slate-800 p-4 rounded-xl leading-relaxed">${bot.usage}</p>
+              </div>
+            ` : ''}
 
-          <div class="space-y-6">
-            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800">
-              <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-3">⚡ Commands</h3>
+            ${bot.config ? `
+              <div>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Configuration</h3>
+                <p class="text-slate-300 text-xs bg-slate-950/60 border border-slate-800 p-4 rounded-xl leading-relaxed">${bot.config}</p>
+              </div>
+            ` : ''}
+
+            <div>
+              <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Commands</h3>
               <div class="space-y-2">${commandsList}</div>
             </div>
 
-            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800">
-              <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-3">📖 Usage Guide</h3>
-              <p class="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">${bot.usage || 'No usage guide available.'}</p>
-            </div>
+            <div class="border-t border-slate-800/80 pt-6">
+              <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">User Reviews (${avgRating} ⭐)</h3>
+              </div>
 
-            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800 space-y-4">
-              <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">💬 Community Reviews (${(bot.reviews || []).length})</h3>
-              
-              ${currentUser ? `
-                <form onsubmit="addReview(event, '${bot.id}')" class="bg-slate-900/60 p-4 rounded-xl border border-slate-800/80 space-y-3">
-                  <div class="flex justify-between items-center">
-                    <div class="flex items-center gap-2">
-                      <img src="${currentUser.avatar}" class="w-6 h-6 rounded-full border border-indigo-500">
-                      <span class="text-xs text-slate-200 font-bold">Reviewing as ${currentUser.username}</span>
-                    </div>
-                    <select id="review-rating" class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-amber-400 focus:outline-none focus:border-indigo-500">
-                      <option value="5">⭐⭐⭐⭐⭐ (5/5)</option>
-                      <option value="4">⭐⭐⭐⭐☆ (4/5)</option>
-                      <option value="3">⭐⭐⭐☆☆ (3/5)</option>
-                      <option value="2">⭐⭐☆☆☆ (2/5)</option>
-                      <option value="1">⭐☆☆☆☆ (1/5)</option>
-                    </select>
-                  </div>
-                  <textarea id="review-text" placeholder="Write your thoughts..." required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 h-16 focus:outline-none focus:border-indigo-500 resize-none"></textarea>
-                  <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs px-4 py-2 rounded-lg transition">Submit Review</button>
-                </form>
-              ` : `
-                <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 text-center space-y-2">
-                  <p class="text-xs text-slate-400">Log in with Discord to write a review.</p>
-                  <button onclick="loginWithDiscord()" class="bg-[#5865F2] hover:bg-[#4752C4] text-white px-4 py-1.5 rounded-lg text-xs font-bold transition">Login</button>
+              <form onsubmit="addReview(event, '${bot.id}')" class="bg-slate-950/60 border border-slate-800 p-4 rounded-xl space-y-3 mb-6">
+                <div class="flex justify-between items-center">
+                  <span class="text-xs font-semibold text-slate-300">Write a Review</span>
+                  <select id="review-rating" class="bg-slate-900 border border-slate-800 text-amber-400 text-xs rounded-lg px-2 py-1">
+                    <option value="5">★★★★★ (5/5)</option>
+                    <option value="4">★★★★☆ (4/5)</option>
+                    <option value="3">★★★☆☆ (3/5)</option>
+                    <option value="2">★★☆☆☆ (2/5)</option>
+                    <option value="1">★☆☆☆☆ (1/5)</option>
+                  </select>
                 </div>
-              `}
+                <textarea id="review-text" placeholder="Share your experience with this bot..." required class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 h-16 focus:outline-none focus:border-indigo-500 transition resize-none"></textarea>
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs px-4 py-1.5 rounded-lg transition">Submit Review</button>
+              </form>
 
-              <div class="space-y-2 mt-4">${reviewsList}</div>
+              <div class="space-y-3">${reviewsList}</div>
             </div>
           </div>
         </div>
@@ -649,83 +663,65 @@
 
     function renderGallery() {
       const grid = document.getElementById('bot-grid');
-      const searchQuery = document.getElementById('search-input')?.value.toLowerCase() || '';
-      const sortVal = document.getElementById('sort-select')?.value || 'popular';
+      const searchVal = document.getElementById('search-input').value.toLowerCase();
+      const sortBy = document.getElementById('sort-select').value;
 
-      let filteredBots = bots.filter(bot => {
-        const matchesCategory = selectedCategory === 'All' || bot.category === selectedCategory;
-        const matchesStatus = selectedStatus === 'All' || bot.status === selectedStatus;
-        const matchesSearch = bot.name.toLowerCase().includes(searchQuery) || bot.description.toLowerCase().includes(searchQuery);
-        return matchesCategory && matchesStatus && matchesSearch;
+      let filtered = bots.filter(b => {
+        const matchesCat = selectedCategory === 'All' || b.category === selectedCategory;
+        const matchesStat = selectedStatus === 'All' || b.status === selectedStatus;
+        const matchesSearch = b.name.toLowerCase().includes(searchVal) || 
+                              b.description.toLowerCase().includes(searchVal) ||
+                              (b.category && b.category.toLowerCase().includes(searchVal));
+        return matchesCat && matchesStat && matchesSearch;
       });
 
-      filteredBots.sort((a, b) => {
-        if (sortVal === 'popular') return (b.votes || 0) - (a.votes || 0);
-        if (sortVal === 'rating') return getAverageRating(b) - getAverageRating(a);
-        if (sortVal === 'name') return a.name.localeCompare(b.name);
-        return 0;
-      });
+      if (sortBy === 'popular') filtered.sort((a, b) => (b.votes || 0) - (a.votes || 0));
+      if (sortBy === 'rating') filtered.sort((a, b) => getAverageRating(b) - getAverageRating(a));
+      if (sortBy === 'newest') filtered.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      if (sortBy === 'name') filtered.sort((a, b) => a.name.localeCompare(b.name));
 
-      if (filteredBots.length === 0) {
-        grid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-500"><p class="text-base font-semibold">No bots found matching your filters.</p></div>`;
+      if (filtered.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full py-16 text-center bg-slate-900/40 rounded-2xl border border-slate-800">
+            <p class="text-slate-400 text-sm font-semibold">No bots found matching your filters.</p>
+          </div>
+        `;
         return;
       }
 
-      grid.innerHTML = filteredBots.map((bot, idx) => {
+      grid.innerHTML = filtered.map(bot => {
         let badgeStyle = bot.status === 'Online' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
                          bot.status === 'Maintenance' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
                          bot.status === 'Updating' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30' :
                          'bg-rose-500/10 text-rose-400 border-rose-500/30';
 
-        const defaultBannerBg = "bg-gradient-to-r from-indigo-900/60 to-purple-950/60";
-        const avgRating = getAverageRating(bot);
-
         return `
-          <div onclick="showBotDetailView('${bot.id}')" class="animate-fade-in bg-slate-900/60 border ${bot.featured ? 'border-amber-500/40 shadow-lg shadow-amber-500/5' : 'border-slate-800/90'} hover:border-indigo-500/50 rounded-2xl overflow-hidden backdrop-blur-md transition-all duration-300 hover:-translate-y-1 cursor-pointer group flex flex-col justify-between" style="animation-delay: ${idx * 0.05}s">
+          <div onclick="showBotDetailView('${bot.id}')" class="bg-slate-900/70 border border-slate-800/80 hover:border-indigo-500/40 rounded-2xl p-5 backdrop-blur-md transition-all duration-200 hover:-translate-y-1 shadow-xl hover:shadow-indigo-500/5 cursor-pointer flex flex-col justify-between group">
             <div>
-              <div class="h-28 w-full relative overflow-hidden ${!bot.banner ? defaultBannerBg : ''}">
-                ${bot.banner ? `<img src="${bot.banner}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">` : ''}
-                <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/30 to-transparent"></div>
-                ${bot.featured ? `<span class="absolute top-3 left-3 bg-amber-500 text-black text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow">⭐ Featured</span>` : ''}
+              <div class="flex items-start justify-between gap-3 mb-4">
+                <div class="flex items-center gap-3">
+                  <img src="${bot.avatar}" class="w-12 h-12 rounded-xl bg-slate-950 object-cover border border-slate-800 group-hover:border-indigo-500/50 transition">
+                  <div>
+                    <div class="flex items-center gap-1.5">
+                      <h3 class="font-bold text-white text-base group-hover:text-indigo-400 transition">${bot.name}</h3>
+                      ${bot.verified ? '<span class="text-indigo-400 text-xs" title="Verified Bot">☑️</span>' : ''}
+                      ${bot.featured ? '<span class="text-amber-400 text-xs" title="Featured Bot">⭐</span>' : ''}
+                    </div>
+                    <span class="text-[11px] text-slate-400">${bot.category}</span>
+                  </div>
+                </div>
+                <span class="text-[10px] border px-2 py-0.5 rounded-full font-semibold ${badgeStyle}">${bot.status}</span>
               </div>
 
-              <div class="px-6 pb-4 relative">
-                <div class="flex justify-between items-end -mt-10 mb-3">
-                  <img src="${bot.avatar}" class="w-16 h-16 rounded-2xl bg-slate-950 object-cover border-2 border-slate-800 shadow-lg">
-                  <span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${badgeStyle}">
-                    ● ${bot.status}
-                  </span>
-                </div>
-                <div class="flex items-center justify-between mb-1.5">
-                  <div class="flex items-center gap-1.5">
-                    <h3 class="font-bold text-xl text-white group-hover:text-indigo-400 transition-colors">${bot.name}</h3>
-                    ${bot.verified ? `<span title="Verified Bot" class="text-indigo-400 text-xs">☑️</span>` : ''}
-                  </div>
-                  ${bot.category ? `<span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-400">${bot.category}</span>` : ''}
-                </div>
-                
-                <div class="flex items-center gap-1 text-xs text-amber-400 mb-2 font-semibold">
-                  <span>⭐ ${avgRating > 0 ? avgRating : 'New'}</span>
-                  <span class="text-slate-500 text-[11px]">(${(bot.reviews || []).length} reviews)</span>
-                </div>
-
-                <p class="text-slate-400 text-sm line-clamp-2 leading-relaxed mb-4">${bot.description}</p>
-                
-                <div class="flex items-center justify-between text-xs text-slate-500 border-t border-slate-800/60 pt-3">
-                  <div class="flex items-center gap-3">
-                    <span>🌐 ${bot.servers || '1.0k+'}</span>
-                    <span>⚡ ${bot.ping || '20ms'}</span>
-                  </div>
-                  <button onclick="upvoteBot(event, '${bot.id}')" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 px-2.5 py-1 rounded-lg text-xs font-semibold transition active:scale-95 flex items-center gap-1">
-                    ❤️ ${bot.votes || 0}
-                  </button>
-                </div>
-              </div>
+              <p class="text-slate-300 text-xs leading-relaxed line-clamp-2 mb-4">${bot.description}</p>
             </div>
 
-            <div class="px-6 pb-6 pt-2">
-              <div class="w-full text-center bg-indigo-600/15 group-hover:bg-indigo-600 border border-indigo-500/30 group-hover:border-indigo-600 text-indigo-300 group-hover:text-white font-medium py-2.5 rounded-xl text-xs transition-all duration-300">
-                View Bot Info & Commands →
+            <div class="border-t border-slate-800/60 pt-3 flex justify-between items-center text-xs">
+              <span class="text-slate-400 text-[11px]">${bot.servers || '1.0k+'} servers</span>
+              <div class="flex items-center gap-2">
+                <button onclick="upvoteBot(event, '${bot.id}')" class="bg-slate-950 hover:bg-rose-950/40 border border-slate-800 hover:border-rose-500/30 text-slate-300 hover:text-rose-400 px-2.5 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1">
+                  ❤️ ${bot.votes || 0}
+                </button>
               </div>
             </div>
           </div>
@@ -734,76 +730,116 @@
     }
 
     function renderAdminList() {
-      const container = document.getElementById('admin-bot-list');
-      container.innerHTML = bots.map(bot => `
-        <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 flex items-center justify-between gap-2">
-          <div class="flex items-center gap-3">
-            <img src="${bot.avatar}" class="w-8 h-8 rounded-lg bg-slate-900 object-cover border border-slate-800">
-            <div>
-              <span class="font-semibold text-sm text-slate-200 block">${bot.name}</span>
-              <span class="text-[10px] text-slate-500">${bot.category || 'General'}</span>
-            </div>
+      const list = document.getElementById('admin-bot-list');
+      if (bots.length === 0) {
+        list.innerHTML = '<p class="text-xs text-slate-500">No bots listed yet.</p>';
+        return;
+      }
+      list.innerHTML = bots.map(b => `
+        <div class="flex items-center justify-between bg-slate-950/80 border border-slate-800 p-2.5 rounded-xl">
+          <div class="flex items-center gap-2.5">
+            <img src="${b.avatar}" class="w-7 h-7 rounded-lg object-cover">
+            <span class="text-xs font-bold text-slate-200">${b.name}</span>
           </div>
           <div class="flex items-center gap-2">
-            <button onclick="startEditBot('${bot.id}')" class="text-xs bg-indigo-950 hover:bg-indigo-900 text-indigo-300 px-3 py-1.5 rounded-lg border border-indigo-800/60 transition">Edit</button>
-            <button onclick="deleteBot('${bot.id}')" class="text-xs bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 px-3 py-1.5 rounded-lg border border-rose-800/60 transition">Delete</button>
+            <button onclick="editBot('${b.id}')" class="text-xs bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 px-2.5 py-1 rounded-lg transition">Edit</button>
+            <button onclick="deleteBot('${b.id}')" class="text-xs bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/30 px-2.5 py-1 rounded-lg transition">Delete</button>
           </div>
         </div>
       `).join('');
     }
 
-    function startEditBot(id) {
-      const bot = bots.find(b => b.id === id);
+    function openAdminModal() {
+      playSound('click');
+      document.getElementById('admin-modal').classList.remove('hidden');
+    }
+
+    function closeAdminModal() {
+      playSound('click');
+      document.getElementById('admin-modal').classList.add('hidden');
+    }
+
+    function authenticateAdmin() {
+      const pin = document.getElementById('admin-pin').value;
+      if (pin === ADMIN_PIN) {
+        playSound('success');
+        document.getElementById('auth-section').classList.add('hidden');
+        document.getElementById('admin-controls').classList.remove('hidden');
+      } else {
+        alert("Incorrect PIN!");
+      }
+    }
+
+    function editBot(botId) {
+      playSound('click');
+      const bot = bots.find(b => b.id === botId);
       if (!bot) return;
 
       document.getElementById('editing-bot-id').value = bot.id;
-      document.getElementById('bot-name').value = bot.name;
-      document.getElementById('bot-category').value = bot.category || "Music";
-      document.getElementById('bot-invite').value = bot.invite;
-      document.getElementById('bot-servers').value = bot.servers || "";
-      document.getElementById('bot-ping').value = bot.ping || "";
-      document.getElementById('bot-status').value = bot.status;
-      document.getElementById('bot-featured').checked = bot.featured || false;
-      document.getElementById('bot-verified').checked = bot.verified || false;
-      document.getElementById('bot-desc').value = bot.description;
-      document.getElementById('bot-commands').value = bot.commands || "";
-      document.getElementById('bot-usage').value = bot.usage || "";
-      document.getElementById('bot-config').value = bot.config || "";
-
-      document.getElementById('bot-avatar-file').required = false;
-      document.getElementById('form-title').innerText = `Edit "${bot.name}"`;
-      document.getElementById('submit-btn').innerText = "Save Changes";
+      document.getElementById('form-title').innerText = `Editing Bot: ${bot.name}`;
+      document.getElementById('submit-btn').innerText = 'Update Bot';
       document.getElementById('cancel-edit-btn').classList.remove('hidden');
       document.getElementById('current-avatar-notice').classList.remove('hidden');
 
-      document.getElementById('bot-form').scrollIntoView({ behavior: 'smooth' });
+      document.getElementById('bot-name').value = bot.name || '';
+      document.getElementById('bot-category').value = bot.category || 'Utility';
+      document.getElementById('bot-featured').checked = !!bot.featured;
+      document.getElementById('bot-verified').checked = !!bot.verified;
+      document.getElementById('bot-invite').value = bot.invite || '';
+      document.getElementById('bot-servers').value = bot.servers || '';
+      document.getElementById('bot-ping').value = bot.ping || '';
+      document.getElementById('bot-status').value = bot.status || 'Online';
+      document.getElementById('bot-desc').value = bot.description || '';
+      document.getElementById('bot-commands').value = bot.commands || '';
+      document.getElementById('bot-usage').value = bot.usage || '';
+      document.getElementById('bot-config').value = bot.config || '';
+      
+      // 🌟 Load Developer Webhook fields
+      document.getElementById('bot-webhook-url').value = bot.webhookUrl || '';
+      document.getElementById('bot-webhook-secret').value = bot.webhookSecret || '';
     }
 
     function resetForm() {
       document.getElementById('bot-form').reset();
-      document.getElementById('editing-bot-id').value = "";
-      document.getElementById('bot-avatar-file').required = true;
-      document.getElementById('form-title').innerText = "Add New Bot";
-      document.getElementById('submit-btn').innerText = "Add Bot";
+      document.getElementById('editing-bot-id').value = '';
+      document.getElementById('form-title').innerText = 'Add New Bot';
+      document.getElementById('submit-btn').innerText = 'Add Bot';
       document.getElementById('cancel-edit-btn').classList.add('hidden');
       document.getElementById('current-avatar-notice').classList.add('hidden');
     }
 
     async function handleFormSubmit(e) {
       e.preventDefault();
+      playSound('click');
 
-      const editingId = document.getElementById('editing-bot-id').value.trim();
+      const editingId = document.getElementById('editing-bot-id').value;
       const avatarFile = document.getElementById('bot-avatar-file').files[0];
       const bannerFile = document.getElementById('bot-banner-file').files[0];
 
-      let avatarBase64 = null, bannerBase64 = null;
-      if (avatarFile) avatarBase64 = await processAndResizeImage(avatarFile, 256, 256);
-      if (bannerFile) bannerBase64 = await processAndResizeImage(bannerFile, 800, 300);
+      let avatarData = null;
+      let bannerData = null;
 
-      const existingBot = editingId ? bots.find(b => b.id === editingId) : null;
-      if (!editingId && !avatarBase64) return alert("Please upload an Avatar Image.");
+      if (avatarFile) {
+        avatarData = await processAndResizeImage(avatarFile, 400, 400);
+      } else if (editingId) {
+        const existing = bots.find(b => b.id === editingId);
+        if (existing) avatarData = existing.avatar;
+      }
 
-      const payload = {
+      if (bannerFile) {
+        bannerData = await processAndResizeImage(bannerFile, 800, 400);
+      } else if (editingId) {
+        const existing = bots.find(b => b.id === editingId);
+        if (existing) bannerData = existing.banner;
+      }
+
+      if (!avatarData) {
+        alert('Please select an avatar image!');
+        return;
+      }
+
+      const botPayload = {
+        id: editingId || undefined,
         name: document.getElementById('bot-name').value.trim(),
         category: document.getElementById('bot-category').value,
         featured: document.getElementById('bot-featured').checked,
@@ -812,116 +848,91 @@
         servers: document.getElementById('bot-servers').value.trim() || '1.0k+',
         ping: document.getElementById('bot-ping').value.trim() || '20ms',
         status: document.getElementById('bot-status').value,
+        avatar: avatarData,
+        banner: bannerData || '',
         description: document.getElementById('bot-desc').value.trim(),
         commands: document.getElementById('bot-commands').value.trim(),
         usage: document.getElementById('bot-usage').value.trim(),
         config: document.getElementById('bot-config').value.trim(),
-        avatar: avatarBase64 || (existingBot ? existingBot.avatar : ''),
-        banner: bannerBase64 || (existingBot ? existingBot.banner : '')
+        
+        // 🌟 Send Developer Webhook fields to server
+        webhookUrl: document.getElementById('bot-webhook-url').value.trim(),
+        webhookSecret: document.getElementById('bot-webhook-secret').value.trim()
       };
-
-      if (editingId) payload.id = editingId;
 
       try {
         const res = await fetch('/api/bots/manage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(botPayload)
         });
 
         if (res.ok) {
           playSound('success');
-          await loadBotsFromAPI();
           resetForm();
-          closeAdminModal();
+          await loadBotsFromAPI();
+          alert(editingId ? 'Bot updated successfully!' : 'Bot added successfully!');
         } else {
           const errData = await res.json();
-          alert(`Error: ${errData.error || 'Save failed'}`);
+          alert(errData.error || 'Failed to save bot.');
         }
       } catch (err) {
-        console.error('Failed to save bot:', err);
+        console.error('Submit error:', err);
+        alert('Failed to communicate with server.');
       }
     }
 
-    async function deleteBot(id) {
-      if (confirm('Are you sure you want to delete this bot?')) {
-        try {
-          const res = await fetch(`/api/bots/${id}`, { method: 'DELETE' });
-          if (res.ok) {
-            await loadBotsFromAPI();
-            showGalleryView();
-          }
-        } catch (err) {
-          console.error('Delete failed', err);
+    async function deleteBot(botId) {
+      if (!confirm('Are you sure you want to delete this bot?')) return;
+      playSound('click');
+
+      try {
+        const res = await fetch(`/api/bots/${botId}`, { method: 'DELETE' });
+        if (res.ok) {
+          playSound('success');
+          await loadBotsFromAPI();
+        } else {
+          alert('Failed to delete bot.');
         }
+      } catch (err) {
+        console.error('Delete error:', err);
       }
     }
 
-    function openAdminModal() { document.getElementById('admin-modal').classList.remove('hidden'); }
-    function closeAdminModal() { document.getElementById('admin-modal').classList.add('hidden'); }
-
-    function authenticateAdmin() {
-      const pin = document.getElementById('admin-pin').value;
-      if (pin === ADMIN_PIN || (currentUser && currentUser.isAdmin)) {
-        playSound('success');
-        document.getElementById('auth-section').classList.add('hidden');
-        document.getElementById('admin-controls').classList.remove('hidden');
-        renderAdminList();
-      } else {
-        alert('Incorrect PIN');
-      }
-    }
-
-    window.addEventListener('keydown', (e) => {
-      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'a') {
-        e.preventDefault();
-        openAdminModal();
-      }
-    });
-
-    // --- Snow Background Animation ---
+    // Canvas Background FX
     const canvas = document.getElementById('snow-canvas');
     const ctx = canvas.getContext('2d');
-    let flakes = [];
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
 
-    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-    function createSnowflakes() {
-      flakes = [];
-      const count = Math.floor(window.innerWidth / 12);
-      for (let i = 0; i < count; i++) {
-        flakes.push({
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height,
-          radius: Math.random() * 2 + 0.5,
-          speed: Math.random() * 0.8 + 0.3,
-          wind: Math.random() * 0.5 - 0.25,
-          opacity: Math.random() * 0.5 + 0.2
-        });
-      }
-    }
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    });
+
+    const particles = Array.from({ length: 45 }, () => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      r: Math.random() * 2 + 1,
+      d: Math.random() * 0.8 + 0.2
+    }));
 
     function drawSnow() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      flakes.forEach(f => {
-        ctx.beginPath();
-        ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 255, 255, ${f.opacity})`;
-        ctx.fill();
-
-        f.y += f.speed;
-        f.x += f.wind;
-
-        if (f.y > canvas.height) { f.y = -5; f.x = Math.random() * canvas.width; }
-        if (f.x > canvas.width) f.x = 0;
-        if (f.x < 0) f.x = canvas.width;
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.25)';
+      ctx.beginPath();
+      particles.forEach(p => {
+        ctx.moveTo(p.x, p.y);
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        p.y += p.d;
+        if (p.y > height) { p.y = 0; p.x = Math.random() * width; }
       });
+      ctx.fill();
       requestAnimationFrame(drawSnow);
     }
+    drawSnow();
 
-    window.addEventListener('resize', () => { resizeCanvas(); createSnowflakes(); });
-    resizeCanvas(); createSnowflakes(); drawSnow();
-
-    // Init
+    // Initial Load
     updateAuthUI();
     loadBotsFromAPI();
   </script>
