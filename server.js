@@ -5,6 +5,9 @@ const cors = require('cors');
 const axios = require('axios');
 const path = require('path');
 
+// Dynamic Base URL Helper (Uses Render URL in production, or localhost locally)
+const BASE_URL = process.env.RENDER_EXTERNAL_URL || 'http://localhost:3000';
+
 // Reliable Discord Webhook Notification Helper
 async function sendDiscordWebhook(title, description, botData, color = 0x5865F2) {
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
@@ -127,7 +130,7 @@ app.get('/api/bots', async (req, res) => {
   }
 });
 
-// Upvote Endpoint with 12-Hour Cooldown & Developer Webhook Notification
+// Upvote Endpoint with 12-Hour Cooldown & Discord Webhook Notification
 app.post('/api/bots/:id/upvote', async (req, res) => {
   try {
     const { discordId, username } = req.body;
@@ -151,8 +154,16 @@ app.post('/api/bots/:id/upvote', async (req, res) => {
     bot.votes += 1;
     await bot.save();
 
-    // 🚀 TRIGGER DEVELOPER VOTE WEBHOOK (If configured by developer)
-    if (bot.webhookUrl && bot.webhookUrl.toLowerCase().startsWith('http')) {
+    // 📣 1. Send Upvote Notification to YOUR Main Discord Channel Webhook
+    await sendDiscordWebhook(
+      '❤️ New Upvote Received!',
+      `**${username || 'A user'}** upvoted **${bot.name}**!\nTotal Votes: **${bot.votes}**`,
+      bot,
+      0xED4245 // Red color
+    );
+
+    // 🚀 2. TRIGGER DEVELOPER VOTE WEBHOOK (Only if configured & not a Discord webhook link)
+    if (bot.webhookUrl && bot.webhookUrl.toLowerCase().startsWith('http') && !bot.webhookUrl.includes('discord.com/api/webhooks')) {
       const votePayload = {
         botId: bot._id,
         userId: discordId,
@@ -324,7 +335,7 @@ app.delete('/api/bots/:id', async (req, res) => {
 // Discord OAuth2 Login Redirect
 app.get('/api/auth/discord', (req, res) => {
   const clientId = process.env.DISCORD_CLIENT_ID || '1530643369351581878';
-  const redirectUri = encodeURIComponent('http://localhost:3000/api/auth/callback');
+  const redirectUri = encodeURIComponent(`${BASE_URL}/api/auth/callback`);
   const url = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=identify`;
   res.redirect(url);
 });
@@ -335,12 +346,14 @@ app.get('/api/auth/callback', async (req, res) => {
   if (!code) return res.status(400).send('Authorization code missing.');
 
   try {
+    const redirectUri = `${BASE_URL}/api/auth/callback`;
+
     const tokenResponse = await axios.post('https://discord.com/api/oauth2/token', new URLSearchParams({
       client_id: process.env.DISCORD_CLIENT_ID || '1530643369351581878',
       client_secret: process.env.DISCORD_CLIENT_SECRET,
       grant_type: 'authorization_code',
       code: code,
-      redirect_uri: 'http://localhost:3000/api/auth/callback',
+      redirect_uri: redirectUri,
     }), {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     });
@@ -378,4 +391,4 @@ app.get('/api/auth/callback', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
