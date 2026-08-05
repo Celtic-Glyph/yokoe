@@ -89,6 +89,10 @@ const BotSchema = new mongoose.Schema({
     discordId: String,
     votedAt: { type: Date, default: Date.now }
   }],
+  // 🌟 NEW WEBHOOK FIELDS FOR DEVELOPERS
+  webhookUrl: { type: String, default: '' },
+  webhookSecret: { type: String, default: '' },
+  
   featured: { type: Boolean, default: false },
   verified: { type: Boolean, default: false },
   avatar: { type: String, required: true },
@@ -121,15 +125,16 @@ app.get('/api/bots', async (req, res) => {
   }
 });
 
-// Upvote Endpoint with 12-Hour Cooldown per User
+// Upvote Endpoint with Developer Webhook Notification
 app.post('/api/bots/:id/upvote', async (req, res) => {
   try {
-    const { discordId } = req.body;
+    const { discordId, username } = req.body;
     if (!discordId) return res.status(401).json({ error: 'You must log in with Discord to upvote.' });
 
     const bot = await Bot.findById(req.params.id);
     if (!bot) return res.status(404).json({ error: 'Bot not found.' });
 
+    // Check 12-hour cooldown
     const existingVote = bot.votedUsers.find(v => v.discordId === discordId);
     if (existingVote) {
       const hoursSinceVote = (new Date() - new Date(existingVote.votedAt)) / (1000 * 60 * 60);
@@ -144,6 +149,32 @@ app.post('/api/bots/:id/upvote', async (req, res) => {
 
     bot.votes += 1;
     await bot.save();
+
+    // 🚀 TRIGGER DEVELOPER VOTE WEBHOOK
+    if (bot.webhookUrl && bot.webhookUrl.startsWith('http')) {
+      const votePayload = {
+        botId: bot._id,
+        userId: discordId,
+        username: username || 'Unknown',
+        type: 'upvote',
+        votedAt: new Date().toISOString(),
+        totalVotes: bot.votes
+      };
+
+      // Send post request in background so user doesn't wait
+      axios.post(bot.webhookUrl, votePayload, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': bot.webhookSecret || '' // Pass authorization key if dev set one
+        },
+        timeout: 5000
+      }).then(() => {
+        console.log(`✅ Developer vote webhook sent to ${bot.name}`);
+      }).catch(err => {
+        console.error(`⚠️ Failed to send developer vote webhook for ${bot.name}:`, err.message);
+      });
+    }
+
     res.json(bot);
   } catch (err) {
     res.status(400).json({ error: 'Upvote failed.' });
