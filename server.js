@@ -64,6 +64,16 @@ async function sendDiscordWebhook(title, description, botData, color = 0x5865F2)
   }
 }
 
+// Serve landing page at root
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'landing.html'));
+});
+
+// Serve directory page at clean URL /explore
+app.get(['/explore', '/bots', '/bot/*'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 const app = express();
 
 // Route for the main homepage
