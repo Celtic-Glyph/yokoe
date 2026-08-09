@@ -64,27 +64,25 @@ async function sendDiscordWebhook(title, description, botData, color = 0x5865F2)
   }
 }
 
+const app = express();
+
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Serve static assets from public folder
+app.use(express.static(path.join(__dirname, 'public')));
+
+// --- CLEAN PAGE ROUTING ---
 // Serve landing page at root
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'landing.html'));
 });
 
-// Serve directory page at clean URL /explore
+// Serve directory page at clean URLs (/explore, /bots, /bot/...)
 app.get(['/explore', '/bots', '/bot/*'], (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
-
-const app = express();
-
-// Route for the main homepage
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'landing.html'));
-});
-
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
 
 // Database Connection
 mongoose.connect(process.env.MONGODB_URI)
