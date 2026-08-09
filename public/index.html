@@ -11,6 +11,9 @@
   <meta property="og:type" content="website">
   <meta name="theme-color" content="#4f46e5">
 
+  <!-- Yokoe Custom Neon Lightning Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='bg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%231e1b4b'/><stop offset='100%25' stop-color='%230f172a'/></linearGradient><linearGradient id='border' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%236366f1'/><stop offset='100%25' stop-color='%2338bdf8'/></linearGradient><linearGradient id='bolt' x1='0%25' y1='0%25' x2='0%25' y2='100%25'><stop offset='0%25' stop-color='%23fef08a'/><stop offset='100%25' stop-color='%23d97706'/></linearGradient></defs><rect x='16' y='16' width='480' height='480' rx='120' fill='url(%23bg)'/><rect x='24' y='24' width='464' height='464' rx='112' fill='none' stroke='url(%23border)' stroke-width='16'/><path d='M 290 48 L 130 268 H 250 L 220 464 L 380 244 H 260 Z' fill='url(%23bolt)' stroke='%23fff' stroke-width='8' stroke-linejoin='round'/></svg>">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @keyframes fadeInUp {
@@ -389,8 +392,19 @@
         renderFeaturedSpotlight();
         renderGallery();
         renderAdminList();
+        checkInitialURLRoute();
       } catch (err) {
         console.error('Failed to load bots from backend API', err);
+      }
+    }
+
+    // Check URL path on load (e.g. /bot/tokkies)
+    function checkInitialURLRoute() {
+      const path = window.location.pathname;
+      if (path.startsWith('/bot/')) {
+        const botSlug = path.replace('/bot/', '').toLowerCase();
+        const foundBot = bots.find(b => b.name.toLowerCase().replace(/\s+/g, '-') === botSlug || b.id === botSlug);
+        if (foundBot) showBotDetailView(foundBot.id, false);
       }
     }
 
@@ -498,7 +512,7 @@
         if (res.ok) {
           await loadBotsFromAPI();
           const detailContainer = document.getElementById('view-details');
-          if (!detailContainer.classList.contains('hidden')) showBotDetailView(botId);
+          if (!detailContainer.classList.contains('hidden')) showBotDetailView(botId, false);
         } else {
           alert(data.error || 'Upvote failed.');
         }
@@ -534,7 +548,7 @@
         if (res.ok) {
           playSound('success');
           await loadBotsFromAPI();
-          showBotDetailView(botId);
+          showBotDetailView(botId, false);
         } else {
           const errData = await res.json();
           alert(errData.error || 'Failed to submit review');
@@ -588,18 +602,27 @@
       }, 1500);
     }
 
+    // Clean URL push on show gallery
     function showGalleryView() {
       playSound('click');
+      history.pushState(null, '', '/explore');
+
       document.getElementById('view-gallery').classList.remove('hidden');
       document.getElementById('featured-spotlight-section').classList.remove('hidden');
       document.getElementById('view-details').classList.add('hidden');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    function showBotDetailView(botId) {
+    // Clean URL push on show bot detail view (e.g. /bot/tokkies)
+    function showBotDetailView(botId, updateHistory = true) {
       playSound('click');
       const bot = bots.find(b => b.id === botId);
       if (!bot) return;
+
+      if (updateHistory) {
+        const cleanSlug = bot.name.toLowerCase().replace(/\s+/g, '-');
+        history.pushState({ botId: bot.id }, '', `/bot/${cleanSlug}`);
+      }
 
       // Increment Page View Counter
       fetch(`/api/bots/${botId}/view`, { method: 'POST' }).catch(() => {});
@@ -725,6 +748,17 @@
       document.getElementById('view-details').classList.remove('hidden');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+
+    // Handle browser Back & Forward navigation
+    window.addEventListener('popstate', (event) => {
+      if (event.state && event.state.botId) {
+        showBotDetailView(event.state.botId, false);
+      } else {
+        document.getElementById('view-gallery').classList.remove('hidden');
+        document.getElementById('featured-spotlight-section').classList.remove('hidden');
+        document.getElementById('view-details').classList.add('hidden');
+      }
+    });
 
     function renderGallery() {
       const grid = document.getElementById('bot-grid');
