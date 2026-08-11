@@ -64,6 +64,12 @@ async function sendDiscordWebhook(title, description, botData, color = 0x5865F2)
   }
 }
 
+const app = express();
+
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
 // --- CLEAN PAGE ROUTING (Place BEFORE express.static) ---
 
 // 1. Root '/' serves landing.html
@@ -78,12 +84,6 @@ app.get(['/explore', '/bots', '/bot/:id'], (req, res) => {
 
 // Serve static assets (CSS, JS, images)
 app.use(express.static(path.join(__dirname, 'public')));
-
-const app = express();
-
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Serve static assets from public folder
 app.use(express.static(path.join(__dirname, 'public')));
