@@ -9,8 +9,9 @@ const path = require('path');
 const BASE_URL = process.env.RENDER_EXTERNAL_URL || 'https://yokoe.xyz';
 
 // Reliable Discord Webhook Notification Helper
-async function sendDiscordWebhook(title, description, botData, color = 0x5865F2) {
-  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+async function sendDiscordWebhook(title, description, botData, color = 0x5865F2, customWebhookUrl = null) {
+  // Use custom URL if provided, otherwise fall back to main webhook URL
+  const webhookUrl = customWebhookUrl || process.env.DISCORD_WEBHOOK_URL;
   if (!webhookUrl) return;
 
   // 1. Strict URL check for avatar (Ignores base64 'data:image...' strings)
@@ -166,16 +167,18 @@ app.post('/api/bots/:id/upvote', async (req, res) => {
     bot.votes += 1;
     await bot.save();
 
-    // 📣 1. Send Upvote Notification to YOUR Main Discord Channel Webhook
+    // 📣 1. Send Upvote Notification to #upvotes Channel
+    const upvoteWebhook = process.env.DISCORD_UPVOTE_WEBHOOK_URL || process.env.DISCORD_WEBHOOK_URL;
     await sendDiscordWebhook(
       '❤️ New Upvote Received!',
       `**${username || 'A user'}** upvoted **${bot.name}**!\nTotal Votes: **${bot.votes}**`,
       bot,
-      0xED4245 // Red color
+      0xED4245, // Red color
+      upvoteWebhook
     );
 
-    // 🚀 2. TRIGGER DEVELOPER VOTE WEBHOOK (Only if configured & not a Discord webhook link)
-    if (bot.webhookUrl && bot.webhookUrl.toLowerCase().startsWith('http') && !bot.webhookUrl.includes('discord.com/api/webhooks')) {
+    // 🚀 2. TRIGGER DEVELOPER VOTE WEBHOOK (Only if configured)
+    if (bot.webhookUrl && bot.webhookUrl.toLowerCase().startsWith('http')) {
       const votePayload = {
         botId: bot._id,
         userId: discordId,
@@ -191,8 +194,6 @@ app.post('/api/bots/:id/upvote', async (req, res) => {
           'Authorization': bot.webhookSecret || ''
         },
         timeout: 5000
-      }).then(() => {
-        console.log(`✅ Developer vote webhook sent to ${bot.name}`);
       }).catch(err => {
         console.error(`⚠️ Failed to send developer vote webhook for ${bot.name}:`, err.message);
       });
