@@ -74,13 +74,25 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- CLEAN PAGE ROUTING ---
-// Serve landing page at root
+// 1. Landing Page (Serves on root '/' and '/home')
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'landing.html'));
 });
 
-// Serve directory page at clean URLs (/explore, /bots, /bot/...)
-app.get(['/explore', '/bots', '/bot/*'], (req, res) => {
+app.get('/home', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'landing.html'));
+});
+
+// 2. Directory Page (Serves index.html on '/explore' and '/bot/...')
+app.get('/explore', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/bots', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/bot/:id', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
