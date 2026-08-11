@@ -64,6 +64,21 @@ async function sendDiscordWebhook(title, description, botData, color = 0x5865F2)
   }
 }
 
+// --- CLEAN PAGE ROUTING (Place BEFORE express.static) ---
+
+// 1. Root '/' serves landing.html
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'landing.html'));
+});
+
+// 2. '/explore', '/bots', and '/bot/:id' serve explore.html
+app.get(['/explore', '/bots', '/bot/:id'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'explore.html'));
+});
+
+// Serve static assets (CSS, JS, images)
+app.use(express.static(path.join(__dirname, 'public')));
+
 const app = express();
 
 app.use(cors());
@@ -72,29 +87,6 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Serve static assets from public folder
 app.use(express.static(path.join(__dirname, 'public')));
-
-// --- CLEAN PAGE ROUTING ---
-// 1. Landing Page (Serves on root '/' and '/home')
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'landing.html'));
-});
-
-app.get('/home', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'landing.html'));
-});
-
-// 2. Directory Page (Serves index.html on '/explore' and '/bot/...')
-app.get('/explore', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/bots', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/bot/:id', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
 
 // Database Connection
 mongoose.connect(process.env.MONGODB_URI)
