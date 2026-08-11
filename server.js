@@ -5,8 +5,8 @@ const cors = require('cors');
 const axios = require('axios');
 const path = require('path');
 
-// Dynamic Base URL Helper (Uses Render URL in production, or localhost locally)
-const BASE_URL = process.env.RENDER_EXTERNAL_URL || 'http://localhost:3000';
+// Uses Render's external URL, or falls back to your custom domain
+const BASE_URL = process.env.RENDER_EXTERNAL_URL || 'https://yokoe.xyz';
 
 // Reliable Discord Webhook Notification Helper
 async function sendDiscordWebhook(title, description, botData, color = 0x5865F2) {
