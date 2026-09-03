@@ -379,8 +379,9 @@ app.get('/api/auth/callback', async (req, res) => {
     const user = userResponse.data;
     const adminIds = (process.env.ADMIN_DISCORD_IDS || '').split(',');
     const isAdmin = adminIds.includes(user.id);
-    const avatarUrl = user.avatar 
-      ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
+    const avatarExt = user.avatar && user.avatar.startsWith('a_') ? 'gif' : 'png';
+    const avatarUrl = user.avatar
+      ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${avatarExt}?size=128`
       : 'https://cdn.discordapp.com/embed/avatars/0.png';
 
     res.send(`

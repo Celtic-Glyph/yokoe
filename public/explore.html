@@ -363,7 +363,7 @@
       if (currentUser) {
         authContainer.innerHTML = `
           <div class="flex items-center gap-2 bg-slate-900 border border-slate-800 p-1.5 pr-3 rounded-xl">
-            <img src="${currentUser.avatar}" class="w-6 h-6 rounded-full border border-indigo-500">
+            <img src="${currentUser.avatar}" onerror="this.onerror=null; this.src='https://cdn.discordapp.com/embed/avatars/0.png';" class="w-6 h-6 rounded-full border border-indigo-500">
             <span class="text-xs text-slate-200 font-bold">${currentUser.username}</span>
             <button onclick="logoutDiscord()" class="text-[10px] text-slate-400 hover:text-rose-400 ml-1">✕</button>
           </div>
