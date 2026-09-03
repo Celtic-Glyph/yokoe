@@ -65,10 +65,10 @@
           🛡️ Admin Panel
         </button>
 
-        <!-- Back to landing button -->
-        <a href="/" class="text-slate-400 hover:text-white transition text-xs sm:text-sm ml-2">
+        <!-- Goes back to the previous page (bot list, etc). Falls back to landing page only if there's no history to return to. -->
+        <button onclick="if (history.length > 1) { history.back(); } else { window.location.href = '/'; }" class="text-slate-400 hover:text-white transition text-xs sm:text-sm ml-2">
           ← Back
-        </a>
+        </button>
       </nav>
     </div>
   </header>
