@@ -300,6 +300,19 @@
     let selectedStatus = "All";
     let currentUser = JSON.parse(localStorage.getItem('yokoe_user') || 'null');
 
+    // Escapes text before inserting it into innerHTML so that literal "<...>" in
+    // user/admin-entered content (e.g. placeholder tokens like <YOUR_KEY>) can't be
+    // parsed as real tags and corrupt the page, and so reviews can't inject scripts.
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playSound(type) {
       if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -429,7 +442,7 @@
           <img src="${bot.avatar}" class="w-14 h-14 rounded-xl object-cover border-2 border-indigo-500/40 group-hover:scale-105 transition shrink-0">
           <div class="pr-12">
             <h3 class="font-bold text-white text-base group-hover:text-indigo-300 transition">${bot.name}</h3>
-            <p class="text-xs text-slate-300 line-clamp-1 mt-0.5">${bot.description}</p>
+            <p class="text-xs text-slate-300 line-clamp-1 mt-0.5">${escapeHtml(bot.description)}</p>
             <div class="flex items-center gap-3 text-[11px] text-slate-400 mt-2">
               <span>❤️ ${bot.votes || 0} votes</span>
               <span>👁️ ${bot.views || 0} views</span>
@@ -644,7 +657,7 @@
         const cmdName = c.split(' - ')[0] || c;
         return `
           <div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 p-3 rounded-xl hover:border-indigo-500/30 transition">
-            <span class="font-mono text-sm text-indigo-300">${c}</span>
+            <span class="font-mono text-sm text-indigo-300">${escapeHtml(c)}</span>
             <button onclick="copyCommand(this, '${cmdName.replace(/'/g, "\\'")}')" class="text-xs bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-lg transition shrink-0 ml-2">Copy</button>
           </div>
         `;
@@ -655,11 +668,11 @@
           <div class="flex justify-between items-center">
             <div class="flex items-center gap-2">
               <img src="${r.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png'}" class="w-5 h-5 rounded-full border border-slate-700">
-              <span class="font-bold text-slate-200 text-xs">${r.author}</span>
+              <span class="font-bold text-slate-200 text-xs">${escapeHtml(r.author)}</span>
             </div>
             <span class="text-amber-400 text-xs">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span>
           </div>
-          <p class="text-slate-300 text-xs leading-relaxed">${r.text}</p>
+          <p class="text-slate-300 text-xs leading-relaxed">${escapeHtml(r.text)}</p>
         </div>
       `).join('') || '<p class="text-xs text-slate-500">No reviews yet. Be the first to leave one!</p>';
 
@@ -697,20 +710,20 @@
           <div class="space-y-6 border-t border-slate-800/80 pt-6">
             <div>
               <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">About</h3>
-              <p class="text-slate-300 text-sm leading-relaxed">${bot.description}</p>
+              <p class="text-slate-300 text-sm leading-relaxed whitespace-pre-line">${escapeHtml(bot.description)}</p>
             </div>
 
             ${bot.usage ? `
               <div>
                 <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Usage Guide</h3>
-                <p class="text-slate-300 text-xs bg-slate-950/60 border border-slate-800 p-4 rounded-xl leading-relaxed">${bot.usage}</p>
+                <p class="text-slate-300 text-xs bg-slate-950/60 border border-slate-800 p-4 rounded-xl leading-relaxed whitespace-pre-line">${escapeHtml(bot.usage)}</p>
               </div>
             ` : ''}
 
             ${bot.config ? `
               <div>
                 <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Configuration</h3>
-                <p class="text-slate-300 text-xs bg-slate-950/60 border border-slate-800 p-4 rounded-xl leading-relaxed">${bot.config}</p>
+                <p class="text-slate-300 text-xs bg-slate-950/60 border border-slate-800 p-4 rounded-xl leading-relaxed whitespace-pre-line">${escapeHtml(bot.config)}</p>
               </div>
             ` : ''}
 
@@ -815,7 +828,7 @@
                 <span class="text-[10px] border px-2 py-0.5 rounded-full font-semibold ${badgeStyle}">${bot.status}</span>
               </div>
 
-              <p class="text-slate-300 text-xs leading-relaxed line-clamp-2 mb-4">${bot.description}</p>
+              <p class="text-slate-300 text-xs leading-relaxed line-clamp-2 mb-4">${escapeHtml(bot.description)}</p>
             </div>
 
             <div class="border-t border-slate-800/60 pt-3 flex justify-between items-center text-xs">
