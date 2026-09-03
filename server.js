@@ -4,9 +4,22 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const axios = require('axios');
 const path = require('path');
+const fs = require('fs');
 
 // Uses Render's external URL, or falls back to your custom domain
 const BASE_URL = process.env.RENDER_EXTERNAL_URL || 'https://yokoe.xyz';
+
+// Loaded once at startup so per-bot page requests only do a string replace,
+// not a disk read.
+const exploreHtmlTemplate = fs.readFileSync(path.join(__dirname, 'public', 'explore.html'), 'utf8');
+
+function escapeAttr(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
 
 // Reliable Discord Webhook Notification Helper
 async function sendDiscordWebhook(title, description, botData, color = 0x5865F2, customWebhookUrl = null) {
@@ -78,9 +91,48 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'landing.html'));
 });
 
-// 2. '/explore', '/bots', and '/bot/:id' serve explore.html
-app.get(['/explore', '/bots', '/bot/:id'], (req, res) => {
+// 2. '/explore' and '/bots' serve explore.html as-is
+app.get(['/explore', '/bots'], (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'explore.html'));
+});
+
+// 3. '/bot/:id' serves explore.html with that bot's title/description/image
+// injected into the meta tags, so sharing the link in Discord, Twitter, etc.
+// unfurls with the bot's real info instead of the site's generic preview.
+app.get('/bot/:id', async (req, res) => {
+  try {
+    const slug = req.params.id.toLowerCase();
+    const allBots = await Bot.find().select('name description avatar');
+    const bot = allBots.find(b =>
+      b.name.toLowerCase().replace(/\s+/g, '-') === slug || b._id.toString() === slug
+    );
+
+    if (!bot) return res.send(exploreHtmlTemplate);
+
+    const pageUrl = `${BASE_URL}/bot/${bot.name.toLowerCase().replace(/\s+/g, '-')}`;
+    const title = `${escapeAttr(bot.name)} - Yokoe Bot Directory`;
+    const rawDescription = (bot.description || '').replace(/\s+/g, ' ').trim().slice(0, 300);
+    const description = escapeAttr(rawDescription);
+    const hasRealImage = bot.avatar && bot.avatar.toLowerCase().startsWith('http');
+    const imageTags = hasRealImage
+      ? `\n  <meta property="og:image" content="${escapeAttr(bot.avatar)}">\n  <meta name="twitter:image" content="${escapeAttr(bot.avatar)}">`
+      : '';
+
+    const html = exploreHtmlTemplate
+      .replace('<title>Yokoe - Bot Directory</title>', `<title>${title}</title>`)
+      .replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="${description}">`)
+      .replace(/<meta property="og:title" content="[^"]*">/, `<meta property="og:title" content="${title}">`)
+      .replace(/<meta property="og:description" content="[^"]*">/, `<meta property="og:description" content="${description}">`)
+      .replace(
+        '<meta property="og:type" content="website">',
+        `<meta property="og:type" content="website">\n  <meta property="og:url" content="${escapeAttr(pageUrl)}">${imageTags}\n  <meta name="twitter:card" content="${hasRealImage ? 'summary_large_image' : 'summary'}">\n  <meta name="twitter:title" content="${title}">\n  <meta name="twitter:description" content="${description}">`
+      );
+
+    res.send(html);
+  } catch (err) {
+    console.error('Failed to render bot meta tags:', err.message);
+    res.send(exploreHtmlTemplate);
+  }
 });
 
 // Serve static assets (CSS, JS, images)
