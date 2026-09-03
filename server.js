@@ -345,6 +345,38 @@ app.delete('/api/bots/:id', async (req, res) => {
   }
 });
 
+// Admin Panel: Send a free-form announcement to a Discord webhook
+app.post('/api/admin/send-webhook', async (req, res) => {
+  try {
+    const { title, message, color, webhookUrl, imageUrl } = req.body;
+
+    const targetUrl = (webhookUrl && typeof webhookUrl === 'string' && webhookUrl.toLowerCase().startsWith('http'))
+      ? webhookUrl
+      : process.env.DISCORD_WEBHOOK_URL;
+
+    if (!targetUrl) return res.status(400).json({ error: 'No webhook URL configured. Set DISCORD_WEBHOOK_URL or provide one.' });
+    if (!message || !String(message).trim()) return res.status(400).json({ error: 'Message is required.' });
+
+    const embed = {
+      title: String(title || 'Yokoe Announcement').slice(0, 256),
+      description: String(message).slice(0, 4096),
+      color: Number.isInteger(color) ? color : 0x5865F2,
+      timestamp: new Date().toISOString(),
+      footer: { text: 'Sent from Yokoe Admin Panel' }
+    };
+
+    if (imageUrl && typeof imageUrl === 'string' && imageUrl.toLowerCase().startsWith('http')) {
+      embed.image = { url: imageUrl };
+    }
+
+    await axios.post(targetUrl, { username: 'Yokoe Directory', embeds: [embed] });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('❌ Failed to send custom webhook:', err.response ? err.response.data : err.message);
+    res.status(500).json({ error: 'Failed to send webhook. Check the URL and try again.' });
+  }
+});
+
 // Discord OAuth2 Login Redirect
 app.get('/api/auth/discord', (req, res) => {
   const clientId = process.env.DISCORD_CLIENT_ID || '1530643369351581878';

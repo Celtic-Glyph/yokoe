@@ -144,7 +144,7 @@
 
   <!-- Admin Control Panel Modal -->
   <div id="admin-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4 z-50">
-    <div class="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative animate-fade-in">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 max-w-5xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative animate-fade-in">
       <div class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
         <div class="flex items-center gap-2">
           <span class="text-indigo-400 text-lg">🛡️</span>
@@ -161,7 +161,8 @@
         </div>
       </div>
 
-      <div id="admin-controls" class="hidden space-y-8">
+      <div id="admin-controls" class="hidden grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
+      <div class="space-y-8 min-w-0">
         <form id="bot-form" onsubmit="handleFormSubmit(event)" class="bg-slate-950/60 p-5 rounded-xl border border-slate-800 space-y-4">
           <div class="flex justify-between items-center">
             <h3 id="form-title" class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Add New Bot</h3>
@@ -290,6 +291,38 @@
           <div id="admin-bot-list" class="space-y-2"></div>
         </div>
       </div>
+
+      <!-- Send Discord Webhook Panel -->
+      <div class="bg-slate-950/60 p-5 rounded-xl border border-slate-800 space-y-4 lg:sticky lg:top-0">
+        <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+          <span>📨</span> Send Discord Webhook
+        </h3>
+        <div>
+          <label class="text-[11px] text-slate-400 mb-1 block">Title (Optional)</label>
+          <input type="text" id="webhook-title" placeholder="Announcement title" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 transition">
+        </div>
+        <div>
+          <label class="text-[11px] text-slate-400 mb-1 block">Message</label>
+          <textarea id="webhook-message" placeholder="What do you want to announce?" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm h-24 focus:outline-none focus:border-indigo-500 transition resize-none"></textarea>
+        </div>
+        <div class="flex gap-3">
+          <div>
+            <label class="text-[11px] text-slate-400 mb-1 block">Color</label>
+            <input type="color" id="webhook-color" value="#5865f2" class="w-14 h-9 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer">
+          </div>
+          <div class="flex-1 min-w-0">
+            <label class="text-[11px] text-slate-400 mb-1 block">Image URL (Optional)</label>
+            <input type="url" id="webhook-image" placeholder="https://..." class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 transition">
+          </div>
+        </div>
+        <div>
+          <label class="text-[11px] text-slate-400 mb-1 block">Webhook URL Override (Optional)</label>
+          <input type="url" id="webhook-url-override" placeholder="Defaults to main site webhook" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 transition">
+          <span class="text-[10px] text-slate-500 mt-1 block">Leave empty to use the site's configured Discord webhook.</span>
+        </div>
+        <button type="button" id="send-webhook-btn" onclick="sendCustomWebhook()" class="w-full bg-indigo-600 hover:bg-indigo-500 py-2.5 rounded-lg text-sm font-semibold transition shadow-lg shadow-indigo-600/20">📨 Send to Discord</button>
+      </div>
+    </div>
     </div>
   </div>
 
@@ -882,6 +915,54 @@
         document.getElementById('admin-controls').classList.remove('hidden');
       } else {
         alert("Incorrect PIN!");
+      }
+    }
+
+    async function sendCustomWebhook() {
+      const title = document.getElementById('webhook-title').value.trim();
+      const message = document.getElementById('webhook-message').value.trim();
+      const colorHex = document.getElementById('webhook-color').value;
+      const webhookUrl = document.getElementById('webhook-url-override').value.trim();
+      const imageUrl = document.getElementById('webhook-image').value.trim();
+      const btn = document.getElementById('send-webhook-btn');
+
+      if (!message) {
+        alert('Please enter a message to send.');
+        return;
+      }
+
+      playSound('click');
+      btn.disabled = true;
+      btn.innerText = 'Sending...';
+
+      try {
+        const res = await fetch('/api/admin/send-webhook', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title,
+            message,
+            color: parseInt(colorHex.replace('#', ''), 16),
+            webhookUrl,
+            imageUrl
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to send webhook.');
+
+        playSound('success');
+        btn.innerText = '✓ Sent!';
+        document.getElementById('webhook-title').value = '';
+        document.getElementById('webhook-message').value = '';
+        document.getElementById('webhook-image').value = '';
+        setTimeout(() => {
+          btn.innerText = '📨 Send to Discord';
+          btn.disabled = false;
+        }, 1500);
+      } catch (err) {
+        alert(err.message);
+        btn.innerText = '📨 Send to Discord';
+        btn.disabled = false;
       }
     }
 
