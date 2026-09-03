@@ -133,6 +133,78 @@ const BotSchema = new mongoose.Schema({
 
 const Bot = mongoose.model('Bot', BotSchema);
 
+// --- Embeddable Badge (SVG) ---
+// In-memory cache so a badge embedded in a busy README/Discord description
+// doesn't hit MongoDB on every single view.
+const badgeCache = new Map();
+const BADGE_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+
+function escapeXml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function buildBadgeSvg(label, value, color) {
+  const charWidth = 6.5;
+  const paddingX = 10;
+  const height = 20;
+  const labelWidth = Math.round(label.length * charWidth) + paddingX * 2;
+  const valueWidth = Math.round(value.length * charWidth) + paddingX * 2;
+  const totalWidth = labelWidth + valueWidth;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${height}" role="img" aria-label="${escapeXml(label)}: ${escapeXml(value)}">
+  <linearGradient id="s" x2="0" y2="100%">
+    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+    <stop offset="1" stop-opacity=".1"/>
+  </linearGradient>
+  <mask id="m"><rect width="${totalWidth}" height="${height}" rx="3" fill="#fff"/></mask>
+  <g mask="url(#m)">
+    <rect width="${labelWidth}" height="${height}" fill="#555"/>
+    <rect x="${labelWidth}" width="${valueWidth}" height="${height}" fill="${color}"/>
+    <rect width="${totalWidth}" height="${height}" fill="url(#s)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
+    <text x="${labelWidth / 2}" y="14">${escapeXml(label)}</text>
+    <text x="${labelWidth + valueWidth / 2}" y="14">${escapeXml(value)}</text>
+  </g>
+</svg>`;
+}
+
+app.get('/api/bots/:id/badge.svg', async (req, res) => {
+  res.set('Content-Type', 'image/svg+xml');
+  res.set('Cache-Control', 'public, max-age=120');
+
+  const stat = ['votes', 'servers', 'views'].includes(req.query.stat) ? req.query.stat : 'votes';
+  const cacheKey = `${req.params.id}:${stat}`;
+  const cached = badgeCache.get(cacheKey);
+  if (cached && Date.now() - cached.time < BADGE_CACHE_TTL) {
+    return res.send(cached.svg);
+  }
+
+  try {
+    const bot = await Bot.findById(req.params.id).select('name votes servers views');
+    if (!bot) {
+      return res.status(404).send(buildBadgeSvg('yokoe', 'not found', '#e05d44'));
+    }
+
+    const valueByStat = {
+      votes: String(bot.votes || 0),
+      servers: String(bot.servers || '0'),
+      views: String(bot.views || 0)
+    };
+    const colorByStat = { votes: '#e91e63', servers: '#5865F2', views: '#3fb950' };
+
+    const svg = buildBadgeSvg(`${bot.name} ${stat}`, valueByStat[stat], colorByStat[stat]);
+    badgeCache.set(cacheKey, { svg, time: Date.now() });
+    res.send(svg);
+  } catch (err) {
+    res.status(500).send(buildBadgeSvg('yokoe', 'error', '#e05d44'));
+  }
+});
+
 // API Routes: Fetch All Bots
 app.get('/api/bots', async (req, res) => {
   try {
