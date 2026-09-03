@@ -135,6 +135,33 @@ app.get('/bot/:id', async (req, res) => {
   }
 });
 
+// robots.txt — allow all crawlers, point them at the sitemap
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send(`User-agent: *\nAllow: /\nSitemap: ${BASE_URL}/sitemap.xml\n`);
+});
+
+// sitemap.xml — lists the homepage, directory, and every bot's page so
+// search engines can discover them (complements the per-bot meta tags above)
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    const allBots = await Bot.find().select('name updatedAt');
+    const urls = [
+      { loc: `${BASE_URL}/` },
+      { loc: `${BASE_URL}/explore` },
+      ...allBots.map(b => ({
+        loc: `${BASE_URL}/bot/${b.name.toLowerCase().replace(/\s+/g, '-')}`,
+        lastmod: b.updatedAt ? b.updatedAt.toISOString() : null
+      }))
+    ];
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(u => `  <url>\n    <loc>${escapeXml(u.loc)}</loc>${u.lastmod ? `\n    <lastmod>${u.lastmod}</lastmod>` : ''}\n  </url>`).join('\n')}\n</urlset>`;
+
+    res.type('application/xml').send(xml);
+  } catch (err) {
+    res.status(500).type('text/plain').send('Failed to generate sitemap.');
+  }
+});
+
 // Serve static assets (CSS, JS, images)
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -394,6 +421,46 @@ app.post('/api/bots/:id/reviews', async (req, res) => {
     res.json(bot);
   } catch (err) {
     res.status(400).json({ error: 'Failed to submit review.' });
+  }
+});
+
+// Delete a Review (admin moderation)
+app.delete('/api/bots/:id/reviews/:reviewId', async (req, res) => {
+  try {
+    const bot = await Bot.findByIdAndUpdate(
+      req.params.id,
+      { $pull: { reviews: { _id: req.params.reviewId } } },
+      { new: true }
+    );
+    if (!bot) return res.status(404).json({ error: 'Bot not found.' });
+    res.json(bot);
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to delete review.' });
+  }
+});
+
+// Report a Bot — alerts you on Discord so you can look into it
+app.post('/api/bots/:id/report', async (req, res) => {
+  try {
+    const { reason, username, discordId } = req.body;
+    if (!discordId) return res.status(401).json({ error: 'You must log in with Discord to report a bot.' });
+    if (!reason || !String(reason).trim()) return res.status(400).json({ error: 'Please describe the issue.' });
+
+    const bot = await Bot.findById(req.params.id);
+    if (!bot) return res.status(404).json({ error: 'Bot not found.' });
+
+    const reportWebhook = process.env.DISCORD_REPORT_WEBHOOK_URL || process.env.DISCORD_WEBHOOK_URL;
+    await sendDiscordWebhook(
+      '🚩 Bot Reported',
+      `**${bot.name}** was reported by **${username || 'Anonymous'}**:\n> ${String(reason).slice(0, 500)}`,
+      bot,
+      0xFFA500,
+      reportWebhook
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to submit report.' });
   }
 });
 

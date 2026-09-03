@@ -125,6 +125,8 @@
       </div>
     </div>
 
+    <div id="site-stats-strip" class="flex flex-wrap gap-4 mb-6 text-xs text-slate-400"></div>
+
     <div id="bot-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
   </main>
 
@@ -161,12 +163,20 @@
         </div>
       </div>
 
-      <div id="admin-controls" class="hidden grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
+      <div id="admin-controls" class="hidden space-y-6">
+      <div id="admin-analytics" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
       <div class="space-y-8 min-w-0">
-        <form id="bot-form" onsubmit="handleFormSubmit(event)" class="bg-slate-950/60 p-5 rounded-xl border border-slate-800 space-y-4">
+        <form id="bot-form" onsubmit="handleFormSubmit(event)" oninput="updateFormPreview()" class="bg-slate-950/60 p-5 rounded-xl border border-slate-800 space-y-4">
           <div class="flex justify-between items-center">
             <h3 id="form-title" class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Add New Bot</h3>
             <button type="button" id="cancel-edit-btn" onclick="resetForm()" class="hidden text-xs text-slate-400 hover:text-white underline">Cancel</button>
+          </div>
+
+          <div>
+            <label class="text-[11px] text-slate-400 mb-1 block">Live Preview</label>
+            <div id="bot-form-preview"></div>
           </div>
 
           <input type="hidden" id="editing-bot-id" value="">
@@ -287,7 +297,14 @@
         </form>
 
         <div class="space-y-3">
-          <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Manage Existing Bots</h3>
+          <div class="flex justify-between items-center flex-wrap gap-2">
+            <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Manage Existing Bots</h3>
+            <div class="flex gap-1.5">
+              <button type="button" onclick="bulkAction('feature')" class="text-[10px] bg-amber-600/20 hover:bg-amber-600/40 text-amber-300 border border-amber-500/30 px-2 py-1 rounded-lg transition">⭐ Feature</button>
+              <button type="button" onclick="bulkAction('verify')" class="text-[10px] bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 px-2 py-1 rounded-lg transition">☑️ Verify</button>
+              <button type="button" onclick="bulkAction('delete')" class="text-[10px] bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/30 px-2 py-1 rounded-lg transition">🗑️ Delete</button>
+            </div>
+          </div>
           <div id="admin-bot-list" class="space-y-2"></div>
         </div>
       </div>
@@ -322,7 +339,8 @@
         </div>
         <button type="button" id="send-webhook-btn" onclick="sendCustomWebhook()" class="w-full bg-indigo-600 hover:bg-indigo-500 py-2.5 rounded-lg text-sm font-semibold transition shadow-lg shadow-indigo-600/20">📨 Send to Discord</button>
       </div>
-    </div>
+      </div>
+      </div>
     </div>
   </div>
 
@@ -332,6 +350,10 @@
     let selectedCategory = "All";
     let selectedStatus = "All";
     let currentUser = JSON.parse(localStorage.getItem('yokoe_user') || 'null');
+    let duplicateAvatarData = null;
+    let duplicateBannerData = null;
+    let previewAvatarObjectUrl = null;
+    const selectedBotIds = new Set();
 
     // Escapes text before inserting it into innerHTML so that literal "<...>" in
     // user/admin-entered content (e.g. placeholder tokens like <YOUR_KEY>) can't be
@@ -344,6 +366,25 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+    }
+
+    // True if a bot was added within the last 7 days — drives the "New" badge.
+    function isNewBot(bot) {
+      if (!bot.createdAt) return false;
+      const ageMs = Date.now() - new Date(bot.createdAt).getTime();
+      return ageMs >= 0 && ageMs < 7 * 24 * 60 * 60 * 1000;
+    }
+
+    // Turns a display string like "1.5k" or "3" into a plain number, for the
+    // site-wide stats strip.
+    function parseServerCount(str) {
+      if (!str) return 0;
+      const match = String(str).toLowerCase().replace(/[,+]/g, '').trim().match(/^([\d.]+)\s*(k|m)?$/);
+      if (!match) return parseInt(str) || 0;
+      let num = parseFloat(match[1]);
+      if (match[2] === 'k') num *= 1000;
+      if (match[2] === 'm') num *= 1000000;
+      return Math.round(num);
     }
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -469,9 +510,12 @@
       spotlightSection.classList.remove('hidden');
       spotlightGrid.innerHTML = featuredBots.map(bot => `
         <div onclick="showBotDetailView('${bot.id}')" class="relative overflow-hidden bg-gradient-to-r from-indigo-950/60 via-slate-900/80 to-purple-950/60 border border-indigo-500/40 hover:border-indigo-400 rounded-2xl p-4 backdrop-blur-md transition-all duration-200 hover:-translate-y-1 shadow-lg shadow-indigo-500/10 cursor-pointer flex items-center gap-4 group">
-          <span class="absolute top-2 right-2 bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-            ⭐ Featured
-          </span>
+          <div class="absolute top-2 right-2 flex items-center gap-1.5">
+            ${isNewBot(bot) ? '<span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">🆕 New</span>' : ''}
+            <span class="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+              ⭐ Featured
+            </span>
+          </div>
           <img src="${bot.avatar}" class="w-14 h-14 rounded-xl object-cover border-2 border-indigo-500/40 group-hover:scale-105 transition shrink-0">
           <div class="pr-12">
             <h3 class="font-bold text-white text-base group-hover:text-indigo-300 transition">${bot.name}</h3>
@@ -546,18 +590,22 @@
         return;
       }
 
+      const clickX = e.clientX;
+      const clickY = e.clientY;
+
       playSound('upvote');
       try {
         const res = await fetch(`/api/bots/${botId}/upvote`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             discordId: currentUser.id,
-            username: currentUser.username 
+            username: currentUser.username
           })
         });
         const data = await res.json();
         if (res.ok) {
+          spawnConfetti(clickX, clickY);
           await loadBotsFromAPI();
           const detailContainer = document.getElementById('view-details');
           if (!detailContainer.classList.contains('hidden')) showBotDetailView(botId, false);
@@ -681,6 +729,94 @@
       }, 1500);
     }
 
+    function toggleQrCode(e, botId) {
+      e.stopPropagation();
+      playSound('click');
+      const bot = bots.find(b => b.id === botId);
+      if (!bot) return;
+
+      const container = document.getElementById('qr-code-container');
+      const isHidden = container.classList.contains('hidden');
+      if (isHidden) {
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(bot.invite)}`;
+        document.getElementById('qr-code-image').src = qrUrl;
+        container.classList.remove('hidden');
+        container.classList.add('flex');
+      } else {
+        container.classList.add('hidden');
+        container.classList.remove('flex');
+      }
+    }
+
+    async function reportBot(e, botId) {
+      e.stopPropagation();
+      if (!currentUser) {
+        alert("You must log in with Discord to report a bot!");
+        loginWithDiscord();
+        return;
+      }
+
+      const reason = prompt("What's wrong with this bot? (This sends a private report, not a public review)");
+      if (!reason || !reason.trim()) return;
+
+      playSound('click');
+      try {
+        const res = await fetch(`/api/bots/${botId}/report`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason, discordId: currentUser.id, username: currentUser.username })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert('Thanks — your report has been sent.');
+        } else {
+          alert(data.error || 'Failed to submit report.');
+        }
+      } catch (err) {
+        alert('Failed to submit report.');
+      }
+    }
+
+    async function deleteReview(botId, reviewId) {
+      if (!confirm('Delete this review?')) return;
+      try {
+        const res = await fetch(`/api/bots/${botId}/reviews/${reviewId}`, { method: 'DELETE' });
+        if (res.ok) {
+          await loadBotsFromAPI();
+          showBotDetailView(botId, false);
+        } else {
+          alert('Failed to delete review.');
+        }
+      } catch (err) {
+        alert('Failed to delete review.');
+      }
+    }
+
+    // Small celebratory particle burst on upvote — purely decorative.
+    function spawnConfetti(x, y) {
+      const colors = ['#f43f5e', '#6366f1', '#f59e0b', '#22c55e', '#38bdf8'];
+      for (let i = 0; i < 18; i++) {
+        const particle = document.createElement('div');
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 40 + Math.random() * 60;
+        const dx = Math.cos(angle) * distance;
+        const dy = Math.sin(angle) * distance;
+        particle.style.cssText = `
+          position: fixed; left: ${x}px; top: ${y}px; width: 6px; height: 6px;
+          background: ${colors[i % colors.length]}; border-radius: 50%;
+          pointer-events: none; z-index: 9999;
+          transition: transform 0.6s ease-out, opacity 0.6s ease-out;
+          transform: translate(0, 0); opacity: 1;
+        `;
+        document.body.appendChild(particle);
+        requestAnimationFrame(() => {
+          particle.style.transform = `translate(${dx}px, ${dy}px)`;
+          particle.style.opacity = '0';
+        });
+        setTimeout(() => particle.remove(), 650);
+      }
+    }
+
     // Clean URL push on show gallery
     function showGalleryView() {
       playSound('click');
@@ -734,11 +870,25 @@
               <img src="${r.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png'}" class="w-5 h-5 rounded-full border border-slate-700">
               <span class="font-bold text-slate-200 text-xs">${escapeHtml(r.author)}</span>
             </div>
-            <span class="text-amber-400 text-xs">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span>
+            <div class="flex items-center gap-2">
+              <span class="text-amber-400 text-xs">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span>
+              ${currentUser && currentUser.isAdmin ? `<button onclick="deleteReview('${bot.id}', '${r._id}')" title="Delete review" class="text-slate-500 hover:text-rose-400 text-xs transition">✕</button>` : ''}
+            </div>
           </div>
           <p class="text-slate-300 text-xs leading-relaxed">${escapeHtml(r.text)}</p>
         </div>
       `).join('') || '<p class="text-xs text-slate-500">No reviews yet. Be the first to leave one!</p>';
+
+      const similarBots = bots.filter(b => b.category === bot.category && b.id !== bot.id).slice(0, 3);
+      const similarBotsList = similarBots.map(b => `
+        <div onclick="showBotDetailView('${b.id}')" class="bg-slate-900/80 border border-slate-800 hover:border-indigo-500/40 p-3 rounded-xl cursor-pointer transition flex items-center gap-3">
+          <img src="${b.avatar}" class="w-10 h-10 rounded-lg object-cover border border-slate-800 shrink-0">
+          <div class="min-w-0">
+            <p class="font-bold text-white text-xs truncate">${escapeHtml(b.name)}</p>
+            <p class="text-[10px] text-slate-400">❤️ ${b.votes || 0} votes</p>
+          </div>
+        </div>
+      `).join('');
 
       container.innerHTML = `
         <div class="h-48 w-full relative ${!bot.banner ? defaultBannerBg : ''}">
@@ -755,20 +905,31 @@
                   <h2 class="text-2xl font-black text-white">${bot.name}</h2>
                   ${bot.verified ? '<span class="text-indigo-400 text-sm" title="Verified Bot">☑️</span>' : ''}
                   ${bot.featured ? '<span class="text-amber-400 text-sm" title="Featured Bot">⭐</span>' : ''}
+                  ${isNewBot(bot) ? '<span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">🆕 New</span>' : ''}
                   <span class="text-xs border px-2.5 py-0.5 rounded-full font-semibold ${badgeStyle}">${bot.status}</span>
                 </div>
                 <p class="text-xs text-slate-400 mt-1">${bot.category} • ${bot.servers || '1.0k+'} servers • 👁️ ${bot.views || 1} views</p>
               </div>
             </div>
 
-            <div class="flex gap-2 w-full sm:w-auto">
+            <div class="flex gap-2 w-full sm:w-auto flex-wrap">
               <button onclick="upvoteBot(event, '${bot.id}')" class="flex-1 sm:flex-none bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 font-bold px-4 py-2 rounded-xl text-xs transition flex items-center justify-center gap-2">
                 ❤️ Upvote (${bot.votes || 0})
               </button>
               <a href="${bot.invite}" onclick="trackInviteClick('${bot.id}')" target="_blank" class="flex-1 sm:flex-none bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2 rounded-xl text-xs transition text-center shadow-lg shadow-indigo-600/20">
                 Invite Bot 🔗
               </a>
+              <button onclick="toggleQrCode(event, '${bot.id}')" title="Show QR code for invite link" class="bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 font-bold px-3 py-2 rounded-xl text-xs transition">
+                📱
+              </button>
+              <button onclick="reportBot(event, '${bot.id}')" title="Report this bot" class="bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-400 hover:text-amber-400 font-bold px-3 py-2 rounded-xl text-xs transition">
+                🚩
+              </button>
             </div>
+          </div>
+
+          <div id="qr-code-container" class="hidden justify-center py-4 -mt-2 mb-2">
+            <img id="qr-code-image" src="" alt="QR code for invite link" class="bg-white p-2 rounded-xl w-32 h-32">
           </div>
 
           <div class="space-y-6 border-t border-slate-800/80 pt-6">
@@ -837,6 +998,13 @@
 
               <div class="space-y-3">${reviewsList}</div>
             </div>
+
+            ${similarBots.length > 0 ? `
+              <div class="border-t border-slate-800/80 pt-6">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">More ${escapeHtml(bot.category)} Bots</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">${similarBotsList}</div>
+              </div>
+            ` : ''}
           </div>
         </div>
       `;
@@ -858,7 +1026,32 @@
       }
     });
 
+    // "/" focuses the search bar, unless the user is already typing somewhere.
+    window.addEventListener('keydown', (event) => {
+      if (event.key !== '/') return;
+      const tag = document.activeElement.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement.isContentEditable) return;
+      const searchInput = document.getElementById('search-input');
+      if (!searchInput || document.getElementById('view-gallery').classList.contains('hidden')) return;
+      event.preventDefault();
+      searchInput.focus();
+    });
+
+    function renderStatsStrip() {
+      const strip = document.getElementById('site-stats-strip');
+      const totalServers = bots.reduce((sum, b) => sum + parseServerCount(b.servers), 0);
+      const totalVotes = bots.reduce((sum, b) => sum + (b.votes || 0), 0);
+      const totalViews = bots.reduce((sum, b) => sum + (b.views || 0), 0);
+      strip.innerHTML = `
+        <span>🤖 <strong class="text-slate-200">${bots.length}</strong> bots</span>
+        <span>🖥️ <strong class="text-slate-200">${totalServers.toLocaleString()}</strong> servers</span>
+        <span>❤️ <strong class="text-slate-200">${totalVotes.toLocaleString()}</strong> votes</span>
+        <span>👁️ <strong class="text-slate-200">${totalViews.toLocaleString()}</strong> views</span>
+      `;
+    }
+
     function renderGallery() {
+      renderStatsStrip();
       const grid = document.getElementById('bot-grid');
       const searchVal = document.getElementById('search-input').value.toLowerCase();
       const sortBy = document.getElementById('sort-select').value;
@@ -904,6 +1097,7 @@
                       <h3 class="font-bold text-white text-base group-hover:text-indigo-400 transition">${bot.name}</h3>
                       ${bot.verified ? '<span class="text-indigo-400 text-xs" title="Verified Bot">☑️</span>' : ''}
                       ${bot.featured ? '<span class="text-amber-400 text-xs" title="Featured Bot">⭐</span>' : ''}
+                      ${isNewBot(bot) ? '<span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[9px] font-bold px-1.5 py-0.5 rounded-full">NEW</span>' : ''}
                     </div>
                     <span class="text-[11px] text-slate-400">${bot.category}</span>
                   </div>
@@ -927,7 +1121,58 @@
       }).join('');
     }
 
+    function renderAdminAnalytics() {
+      const el = document.getElementById('admin-analytics');
+      if (!el) return;
+
+      const totalVotes = bots.reduce((sum, b) => sum + (b.votes || 0), 0);
+      const totalViews = bots.reduce((sum, b) => sum + (b.views || 0), 0);
+      const topBot = bots.length ? bots.reduce((a, b) => (b.votes || 0) > (a.votes || 0) ? b : a) : null;
+
+      const tile = (label, value) => `
+        <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-3 text-center">
+          <p class="text-lg font-black text-white truncate">${value}</p>
+          <p class="text-[10px] text-slate-400 uppercase tracking-wider">${label}</p>
+        </div>
+      `;
+
+      el.innerHTML = tile('Bots', bots.length)
+        + tile('Total Votes', totalVotes.toLocaleString())
+        + tile('Total Views', totalViews.toLocaleString())
+        + tile('Top Bot', topBot ? escapeHtml(topBot.name) : '—');
+    }
+
+    function toggleBotSelection(botId, checked) {
+      if (checked) selectedBotIds.add(botId);
+      else selectedBotIds.delete(botId);
+    }
+
+    async function bulkAction(type) {
+      if (selectedBotIds.size === 0) {
+        alert('Select at least one bot first.');
+        return;
+      }
+      const ids = Array.from(selectedBotIds);
+
+      if (type === 'delete') {
+        if (!confirm(`Delete ${ids.length} selected bot(s)? This cannot be undone.`)) return;
+        await Promise.all(ids.map(id => fetch(`/api/bots/${id}`, { method: 'DELETE' })));
+      } else {
+        const field = type === 'feature' ? 'featured' : 'verified';
+        await Promise.all(ids.map(id => fetch('/api/bots/manage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, [field]: true })
+        })));
+      }
+
+      selectedBotIds.clear();
+      playSound('success');
+      await loadBotsFromAPI();
+    }
+
     function renderAdminList() {
+      renderAdminAnalytics();
       const list = document.getElementById('admin-bot-list');
       if (bots.length === 0) {
         list.innerHTML = '<p class="text-xs text-slate-500">No bots listed yet.</p>';
@@ -936,11 +1181,13 @@
       list.innerHTML = bots.map(b => `
         <div class="flex items-center justify-between bg-slate-950/80 border border-slate-800 p-2.5 rounded-xl">
           <div class="flex items-center gap-2.5">
+            <input type="checkbox" onchange="toggleBotSelection('${b.id}', this.checked)" class="rounded border-slate-700 bg-slate-950 text-indigo-600 focus:ring-0">
             <img src="${b.avatar}" class="w-7 h-7 rounded-lg object-cover">
-            <span class="text-xs font-bold text-slate-200">${b.name}</span>
+            <span class="text-xs font-bold text-slate-200">${escapeHtml(b.name)}</span>
           </div>
           <div class="flex items-center gap-2">
             <button onclick="editBot('${b.id}')" class="text-xs bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 px-2.5 py-1 rounded-lg transition">Edit</button>
+            <button onclick="duplicateBot('${b.id}')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-lg transition">Duplicate</button>
             <button onclick="deleteBot('${b.id}')" class="text-xs bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/30 px-2.5 py-1 rounded-lg transition">Delete</button>
           </div>
         </div>
@@ -963,6 +1210,8 @@
         playSound('success');
         document.getElementById('auth-section').classList.add('hidden');
         document.getElementById('admin-controls').classList.remove('hidden');
+        renderAdminAnalytics();
+        updateFormPreview();
       } else {
         alert("Incorrect PIN!");
       }
@@ -1042,6 +1291,45 @@
       
       document.getElementById('bot-webhook-url').value = bot.webhookUrl || '';
       document.getElementById('bot-webhook-secret').value = bot.webhookSecret || '';
+
+      duplicateAvatarData = null;
+      duplicateBannerData = null;
+      updateFormPreview();
+      document.getElementById('bot-form').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function duplicateBot(botId) {
+      playSound('click');
+      const bot = bots.find(b => b.id === botId);
+      if (!bot) return;
+
+      document.getElementById('editing-bot-id').value = '';
+      document.getElementById('form-title').innerText = `Duplicating: ${bot.name}`;
+      document.getElementById('submit-btn').innerText = 'Add Bot';
+      document.getElementById('cancel-edit-btn').classList.remove('hidden');
+      document.getElementById('current-avatar-notice').classList.remove('hidden');
+
+      document.getElementById('bot-name').value = `${bot.name} Copy`;
+      document.getElementById('bot-category').value = bot.category || 'Utility';
+      document.getElementById('bot-featured').checked = false;
+      document.getElementById('bot-verified').checked = false;
+      document.getElementById('bot-invite').value = bot.invite || '';
+      document.getElementById('bot-servers').value = bot.servers || '';
+      document.getElementById('bot-ping').value = bot.ping || '';
+      document.getElementById('bot-status').value = bot.status || 'Online';
+      document.getElementById('bot-desc').value = bot.description || '';
+      document.getElementById('bot-commands').value = bot.commands || '';
+      document.getElementById('bot-usage').value = bot.usage || '';
+      document.getElementById('bot-config').value = bot.config || '';
+
+      document.getElementById('bot-webhook-url').value = '';
+      document.getElementById('bot-webhook-secret').value = '';
+
+      // Keeps the same avatar/banner unless a new file is chosen before submitting.
+      duplicateAvatarData = bot.avatar || null;
+      duplicateBannerData = bot.banner || null;
+      updateFormPreview();
+      document.getElementById('bot-form').scrollIntoView({ behavior: 'smooth' });
     }
 
     function resetForm() {
@@ -1051,6 +1339,58 @@
       document.getElementById('submit-btn').innerText = 'Add Bot';
       document.getElementById('cancel-edit-btn').classList.add('hidden');
       document.getElementById('current-avatar-notice').classList.add('hidden');
+      duplicateAvatarData = null;
+      duplicateBannerData = null;
+      updateFormPreview();
+    }
+
+    function updateFormPreview() {
+      const previewEl = document.getElementById('bot-form-preview');
+      if (!previewEl) return;
+
+      const name = document.getElementById('bot-name').value.trim() || 'Bot Name';
+      const category = document.getElementById('bot-category').value;
+      const status = document.getElementById('bot-status').value;
+      const desc = document.getElementById('bot-desc').value.trim() || 'Short description will appear here...';
+      const servers = document.getElementById('bot-servers').value.trim() || '1.0k+';
+      const featured = document.getElementById('bot-featured').checked;
+      const verified = document.getElementById('bot-verified').checked;
+      const avatarFile = document.getElementById('bot-avatar-file').files[0];
+      const editingId = document.getElementById('editing-bot-id').value;
+
+      const badgeStyle = status === 'Online' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                         status === 'Maintenance' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                         status === 'Updating' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30' :
+                         'bg-rose-500/10 text-rose-400 border-rose-500/30';
+
+      let avatarSrc = 'https://cdn.discordapp.com/embed/avatars/0.png';
+      if (avatarFile) {
+        if (previewAvatarObjectUrl) URL.revokeObjectURL(previewAvatarObjectUrl);
+        previewAvatarObjectUrl = URL.createObjectURL(avatarFile);
+        avatarSrc = previewAvatarObjectUrl;
+      } else if (editingId) {
+        const existing = bots.find(b => b.id === editingId);
+        if (existing) avatarSrc = existing.avatar;
+      } else if (duplicateAvatarData) {
+        avatarSrc = duplicateAvatarData;
+      }
+
+      previewEl.innerHTML = `
+        <div class="bg-slate-900/70 border border-slate-800/80 rounded-2xl p-4 flex items-start gap-3">
+          <img src="${avatarSrc}" class="w-12 h-12 rounded-xl bg-slate-950 object-cover border border-slate-800 shrink-0">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <h4 class="font-bold text-white text-sm truncate">${escapeHtml(name)}</h4>
+              ${verified ? '<span class="text-indigo-400 text-xs">☑️</span>' : ''}
+              ${featured ? '<span class="text-amber-400 text-xs">⭐</span>' : ''}
+              <span class="text-[9px] border px-1.5 py-0.5 rounded-full font-semibold ${badgeStyle} ml-auto">${status}</span>
+            </div>
+            <span class="text-[10px] text-slate-400">${escapeHtml(category)}</span>
+            <p class="text-xs text-slate-300 leading-relaxed line-clamp-2 mt-1">${escapeHtml(desc)}</p>
+            <span class="text-[10px] text-slate-500 mt-1 block">${escapeHtml(servers)} servers</span>
+          </div>
+        </div>
+      `;
     }
 
     async function handleFormSubmit(e) {
@@ -1069,6 +1409,8 @@
       } else if (editingId) {
         const existing = bots.find(b => b.id === editingId);
         if (existing) avatarData = existing.avatar;
+      } else if (duplicateAvatarData) {
+        avatarData = duplicateAvatarData;
       }
 
       if (bannerFile) {
@@ -1076,6 +1418,8 @@
       } else if (editingId) {
         const existing = bots.find(b => b.id === editingId);
         if (existing) bannerData = existing.banner;
+      } else if (duplicateBannerData) {
+        bannerData = duplicateBannerData;
       }
 
       if (!avatarData) {
