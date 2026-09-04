@@ -7,15 +7,16 @@
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    // Base UI (backgrounds, brand buttons/borders) is grayscale for the B&W
-    // theme. Status/meaning colors (emerald, sky, amber, rose) are left as
-    // Tailwind's real defaults on purpose, so they still pop where it matters.
+    // Base UI is grayscale for the B&W theme, except brand buttons/links
+    // (indigo) which get a golden-yellow accent. Status/meaning colors
+    // (emerald, sky, amber, rose) are left as Tailwind's real defaults so
+    // they still pop where it matters.
     tailwind.config = {
       theme: {
         extend: {
           colors: {
             slate:  { 50:'#fafafa',100:'#f5f5f5',200:'#e5e5e5',300:'#d4d4d4',400:'#a3a3a3',500:'#737373',600:'#525252',700:'#404040',800:'#262626',900:'#171717',950:'#0a0a0a' },
-            indigo: { 50:'#ffffff',100:'#fafafa',200:'#f0f0f0',300:'#e0e0e0',400:'#cccccc',500:'#767676',600:'#545454',700:'#404040',800:'#2b2b2b',900:'#181818',950:'#0d0d0d' },
+            indigo: { 50:'#fefbf1',100:'#fcf5de',200:'#f9e9b8',300:'#f5da89',400:'#f1c950',500:'#bd910f',600:'#8e6d0b',700:'#715709',800:'#554107',900:'#392c05',950:'#211903' },
             purple: { 50:'#d9d9d9',100:'#c7c7c7',200:'#a8a8a8',300:'#8a8a8a',400:'#6b6b6b',500:'#4f4f4f',600:'#3a3a3a',700:'#2c2c2c',800:'#1c1c1c',900:'#0e0e0e',950:'#060606' }
           }
         }

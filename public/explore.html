@@ -16,16 +16,17 @@
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    // Base UI (backgrounds, brand buttons/borders) is grayscale for the B&W
-    // theme. Status/meaning colors (emerald, sky, amber, rose) are left as
-    // Tailwind's real defaults on purpose, so they still pop where it matters
-    // (Online/Offline/Maintenance/Updating, delete, featured, upvotes).
+    // Base UI is grayscale for the B&W theme, except brand buttons/links
+    // (indigo) which get a golden-yellow accent. Status/meaning colors
+    // (emerald, sky, amber, rose) are left as Tailwind's real defaults so
+    // they still pop where it matters (Online/Offline/Maintenance/Updating,
+    // delete, featured, upvotes).
     tailwind.config = {
       theme: {
         extend: {
           colors: {
             slate:  { 50:'#fafafa',100:'#f5f5f5',200:'#e5e5e5',300:'#d4d4d4',400:'#a3a3a3',500:'#737373',600:'#525252',700:'#404040',800:'#262626',900:'#171717',950:'#0a0a0a' },
-            indigo: { 50:'#ffffff',100:'#fafafa',200:'#f0f0f0',300:'#e0e0e0',400:'#cccccc',500:'#767676',600:'#545454',700:'#404040',800:'#2b2b2b',900:'#181818',950:'#0d0d0d' },
+            indigo: { 50:'#fefbf1',100:'#fcf5de',200:'#f9e9b8',300:'#f5da89',400:'#f1c950',500:'#bd910f',600:'#8e6d0b',700:'#715709',800:'#554107',900:'#392c05',950:'#211903' },
             purple: { 50:'#d9d9d9',100:'#c7c7c7',200:'#a8a8a8',300:'#8a8a8a',400:'#6b6b6b',500:'#4f4f4f',600:'#3a3a3a',700:'#2c2c2c',800:'#1c1c1c',900:'#0e0e0e',950:'#060606' }
           }
         }
@@ -70,7 +71,7 @@
       <nav class="flex items-center gap-3 text-sm font-semibold">
         <!-- Dynamic User Auth Section -->
         <div id="auth-container">
-          <button onclick="loginWithDiscord()" class="bg-[#545454] hover:bg-[#6e6e6e] text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-[#545454]/20 active:scale-95">
+          <button onclick="loginWithDiscord()" class="bg-[#8e6d0b] hover:bg-[#bd910f] text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-[#8e6d0b]/20 active:scale-95">
             <svg class="w-4 h-4 fill-current" viewBox="0 0 127.14 96.36">
               <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a73.57,73.57,0,0,0,64.32,0c.87.69,1.76,1.37,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1,105.25,105.25,0,0,0,32.19-16.14c2.64-27.38-4.51-51.11-18.95-72.15ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.92,53.87,53,48.74,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.92,96.1,53,91,65.69,84.69,65.69Z"/>
             </svg>
@@ -479,7 +480,7 @@
         }
       } else {
         authContainer.innerHTML = `
-          <button onclick="loginWithDiscord()" class="bg-[#545454] hover:bg-[#6e6e6e] text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-[#545454]/20 active:scale-95">
+          <button onclick="loginWithDiscord()" class="bg-[#8e6d0b] hover:bg-[#bd910f] text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-[#8e6d0b]/20 active:scale-95">
             <svg class="w-4 h-4 fill-current" viewBox="0 0 127.14 96.36">
               <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a73.57,73.57,0,0,0,64.32,0c.87.69,1.76,1.37,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1,105.25,105.25,0,0,0,32.19-16.14c2.64-27.38-4.51-51.11-18.95-72.15ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.92,53.87,53,48.74,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.92,96.1,53,91,65.69,84.69,65.69Z"/>
             </svg>
