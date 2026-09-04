@@ -875,7 +875,7 @@
         const cmdName = c.split(' - ')[0] || c;
         return `
           <div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 p-3 rounded-xl hover:border-indigo-500/30 transition">
-            <span class="font-mono text-sm text-indigo-300">${escapeHtml(c)}</span>
+            <span class="font-mono text-sm text-white">${escapeHtml(c)}</span>
             <button onclick="copyCommand(this, '${cmdName.replace(/'/g, "\\'")}')" class="text-xs bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-lg transition shrink-0 ml-2">Copy</button>
           </div>
         `;
