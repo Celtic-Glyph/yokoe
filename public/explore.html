@@ -990,7 +990,7 @@
                   <input id="badge-markdown" readonly value="[![${escapeHtml(bot.name)}](${location.origin}/api/bots/${bot.id}/badge.svg?stat=votes)](${location.origin}/bot/${bot.name.toLowerCase().replace(/\s+/g, '-')})" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none">
                   <button type="button" onclick="copyBadgeMarkdown(this)" class="text-xs bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-lg transition shrink-0">Copy</button>
                 </div>
-                <p class="text-[10px] text-slate-500">Paste this into your bot's Discord description, GitHub README, or anywhere Markdown/HTML images are supported. The badge updates automatically.</p>
+                <p class="text-[10px] text-slate-500">Paste this into your bot's GitHub README, npm page, or anywhere else Markdown images are supported. It won't render in Discord itself — Discord doesn't display Markdown images. The badge updates automatically wherever it's used.</p>
               </div>
             </div>
 
